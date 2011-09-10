@@ -31,7 +31,7 @@ class SearchError(Exception):
 
 
 class S(elasticutils.S):
-    """A lazy query of Sphinx, whose API is a subset of elasticutils.S"""
+    """A lazy query of Sphinx whose API is a subset of elasticutils.S"""
     def __init__(self, model, host=settings.SPHINX_HOST,
                               port=settings.SPHINX_PORT):
         super(S, self).__init__(model)
@@ -43,18 +43,31 @@ class S(elasticutils.S):
         raise NotImplementedError("Sphinx doesn't support faceting.")
 
     def query(self, **kwargs):
-        """Use the value of the only kwarg as the query string.
+        """Use the value of the ``any_`` kwarg as the query string.
 
         ElasticSearch supports restricting the search to individual fields, but
-        Sphinx just takes a string and makes the field decisions on the server.
-        To present an elasticutils-compatible API, we take the only kwarg's
-        value (no fair including more than one, because the results would be
-        indeterminate) and use it as the query string. Better ideas welcome.
+        Sphinx just takes a string and searches all fields. To present an
+        elasticutils-compatible API, we take only the ``any_``  kwarg's value
+        and use it as the query string, ignoring any other kwargs.
 
         """
-        if len(kwargs) != 1:
-            raise TypeError('query() takes exactly 1 keyword arg.')
-        return self._clone(next_step=('query', kwargs[kwargs.keys()[0]]))
+        if 'any_' not in kwargs:
+            raise TypeError('query() must have an `any_` kwarg.')
+        return self._clone(next_step=('query', kwargs['any_']))
+
+    def weight(self, **kwargs):
+        """Set the weighting of matches per field.
+
+        What should be the range of weights?
+
+        Weights given here are added to any defaults or any previously
+        specified weights, though later references to the same field override
+        earlier ones. If we need to clear weights, add a ``clear_weights()``
+        method.
+
+        """
+        # If we ever need index boosting, weight_indices() might be nice.
+        raise NotImplementedError
 
     def _sphinx(self):
         """Parametrize a SphinxClient to execute the query I represent, run it, and return it.
@@ -123,12 +136,12 @@ class S(elasticutils.S):
 #             qs['filter'] = {'and': filters}
 #         elif filters:
 #             qs['filter'] = filters[0]
-# 
+#
 #         if len(queries) > 1:
 #             qs['query'] = {'bool': {'must': queries}}
 #         elif queries:
 #             qs['query'] = queries[0]
-# 
+#
 #         if fields:
 #             qs['fields'] = fields
 #         if sort:
@@ -137,20 +150,20 @@ class S(elasticutils.S):
 #             qs['from'] = self.start
 #         if self.stop is not None:
 #             qs['size'] = self.stop - self.start
-# 
+#
 #         self.fields, self.as_list, self.as_dict = fields, as_list, as_dict
 #         return qs
         return sphinx
-    
+
     def _default_sort(self):
         """Return the ordering to use if the SphinxMeta doesn't specify one."""
         return '@relevance'
-        
+
     def raw(self):
         """Return the raw matches from the first (and only) query.
-        
+
         If anything goes wrong, raise SearchError.
-        
+
         """
         sphinx = self._sphinx()
         try:

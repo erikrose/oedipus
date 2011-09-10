@@ -4,7 +4,7 @@ We mock out all Sphinx's APIs.
 
 """
 import fudge
-from nose.tools import eq_, assert_raises
+from nose.tools import assert_raises
 import sphinxapi  # Comes in sphinx source code tarball
 
 from oedipus import S, SearchError
@@ -48,7 +48,7 @@ def test_simple_query(sphinx_client):
                   .is_a_stub()
                   .expects('AddQuery').with_args('gerbil', 'biscuit')
                   .expects('RunQueries').returns([dict(status=0, matches=[])]))
-    s = S(Biscuit).query(dummy='^$gerbil').raw()
+    s = S(Biscuit).query(any_='^$gerbil', ignored_kwarg='dummy').raw()
 
 
 def test_single_filter():

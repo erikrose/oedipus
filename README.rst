@@ -7,12 +7,45 @@ API to elasticutils, giving you the option of switching back and forth between
 Sphinx and elasticsearch at the flip of a switch, as long as you stick to the
 common subset of functionality.
 
+Requirements
+============
+
+* Not Django. oedipus has a few handy affordances for it but doesn't need it.
+* sphinxapi.py, the Python module from the Sphinx source code distribution
+* elasticutils
+
+Gotchas
+=======
+
+Sphinx takes just a query string and bangs it against all indexed fields.
+ElasticSearch, on the other hand, lets you specify which fields to match
+against per call. This makes the use of ``query()`` between the two necessarily
+inconsistent:
+
+* oedipus' ``query()`` takes a single keyword arg, ``any_``, which matches
+  against all fields, Sphinx-style::
+
+  S(Animal).query(any_='gerbil')
+
+* elasticutils' ``query()`` takes an arbitrary number of keyword args, one per
+  field to match against::
+
+  S(Animal).query(title='gerbil')
+
+Thus, if you want to maintain the ability to switch quickly between Sphinx and
+ElasticSearch, simply combine the two::
+
+  S(Animal).query(any_='gerbil', title='gerbil')
+
 Running the Tests
 =================
 
 Do something like this::
 
-    DJANGO_SETTINGS_MODULE=kitsune.settings PYTHONPATH=/Users/erose/Checkouts/kitsune/vendor/src/elasticutils:/Users/erose/Checkouts/:/Users/erose/Checkouts/kitsune/apps/search:/Users/erose/Checkouts/kitsune/vendor/packages/logilab-common:. nosetests
+    DJANGO_SETTINGS_MODULE=kitsune.settings PYTHONPATH=/Users/erose/Checkouts/kitsune/vendor/src/elasticutils:/Users/erose/Checkouts/:/Users/erose/Checkouts/kitsune/vendor/packages/logilab-common:/Users/erose/Checkouts/kitsune/vendor/src/sphinxapi:. nosetests
+
+Beware that if you run the support.mozilla.com tests, they will clear out your
+Sphinx indices. Don't be surprised.
 
 Future Plans
 ============
@@ -24,3 +57,5 @@ Future Plans
 * Decouple the SphinxMeta classes from the models. We should have a nice way of
   assigning Sphinx metadata to third-party models that we can't just scribble
   on. Then we won't need to depend on Django.
+* Think about mapping ``any_`` queries to ElasticSearch ``_all`` queries. We
+  might need to add some support to elasticutils first.

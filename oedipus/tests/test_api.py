@@ -61,18 +61,28 @@ def test_single_filter(sphinx_client):
     """A filter call should be translated into the right Sphinx API calls."""
     (sphinx_client.expects_call().returns_fake()
                   .is_a_stub()
-                  .expects('SetFilter').with_args('a', [1])
-                  .expects('SetFilter').with_args('b', [2, 3])
+                  .expects('SetFilter').with_args('a', [1], False)
+                  .expects('SetFilter').with_args('b', [2, 3], False)
 
                   # These 2 lines must be ordered such. Why? Fudge bug?
-                  .expects('SetFilterRange').with_args('d', MIN_LONG, 5)
-                  .expects('SetFilterRange').with_args('c', 4, MAX_LONG)
+                  .expects('SetFilterRange').with_args('d', MIN_LONG, 5, False)
+                  .expects('SetFilterRange').with_args('c', 4, MAX_LONG, False)
 
                   .expects('RunQueries').returns(no_results))
     S(Biscuit).filter(a=1,  # Test auto-listification of ints for equality filters.
                       b__in=[2, 3],
                       c__gte=4,
                       d__lte=5).raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_single_exclude(sphinx_client):
+    """Assert conditions invert correctly."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetFilter').with_args('b', [2, 3], True)
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).exclude(b__in=[2, 3]).raw()
 
 
 def test_results_as_objects():

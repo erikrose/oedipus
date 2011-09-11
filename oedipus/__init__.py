@@ -87,9 +87,11 @@ class S(elasticutils.S):
 
         Takes only a single kwarg, because Sphinx can't OR filters together
         (or, equivalently, exclude only documents which match all of several
-        criteria).
+        criteria). Taking multiple kwargs would imply that it could, assuming
+        parallel semantics with Django's ORM's ``exclude()``.
 
-        This exclusion is ANDed with any previously requested ones.
+        However, feel free to call ``exclude()`` more than once. Each exclusion
+        is ANDed with any previously requested ones.
 
         """
         if len(kwargs) != 1:
@@ -139,8 +141,7 @@ class S(elasticutils.S):
             elif action == 'filter':
                 _set_filters(sphinx, value)
             elif action == 'exclude':
-                # TODO
-                pass
+                _set_filters(sphinx, value, exclude=True)
             else:
                 raise NotImplementedError(action)
 
@@ -234,7 +235,7 @@ def _split(key):
     return parts
 
 
-def _set_filters(sphinx, keys_and_values):
+def _set_filters(sphinx, keys_and_values, exclude=False):
     """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
     # TODO: This is pretty naive. Be smart: notice when you have both foo_gte
     # and foo_lte, and mix them down to a single call to SetFilterRange().
@@ -245,10 +246,10 @@ def _set_filters(sphinx, keys_and_values):
             value = [value]
 
         if not comparator or comparator == 'in':
-            sphinx.SetFilter(field, value)
+            sphinx.SetFilter(field, value, exclude)
         elif comparator == 'gte':
-            sphinx.SetFilterRange(field, value, MAX_LONG)
+            sphinx.SetFilterRange(field, value, MAX_LONG, exclude)
         elif comparator == 'lte':
-            sphinx.SetFilterRange(field, MIN_LONG, value)
+            sphinx.SetFilterRange(field, MIN_LONG, value, exclude)
         else:
             raise ValueError('"%s", in "%s__%s=%s", is not a supported comparator.' % (comparator, field, comparator, value))

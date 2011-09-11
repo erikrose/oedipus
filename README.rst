@@ -14,8 +14,14 @@ Requirements
 * sphinxapi.py, the Python module from the Sphinx source code distribution
 * elasticutils
 
-Gotchas
-=======
+Limitations Compared to elasticutils
+====================================
+
+Because Sphinx itself is less flexible than ElasticSearch, oedipus can't offer
+all the features of elasticutils' full API.
+
+query() is Less Controllable
+----------------------------
 
 Sphinx takes just a query string and bangs it against all indexed fields.
 ElasticSearch, on the other hand, lets you specify which fields to match
@@ -36,6 +42,12 @@ Thus, if you want to maintain the ability to switch quickly between Sphinx and
 ElasticSearch, simply combine the two::
 
   S(Animal).query(any_='gerbil', title='gerbil')
+
+No Or-ing of Filters
+--------------------
+
+There's no way to "or" filters together in Sphinx, so oedipus does not support
+elasticutils' ``F`` objects.
 
 Running the Tests
 =================
@@ -59,3 +71,6 @@ Future Plans
   on. Then we won't need to depend on Django.
 * Think about mapping ``any_`` queries to ElasticSearch ``_all`` queries. We
   might need to add some support to elasticutils first.
+* Make sure we always throw nice errors when someone tries to do
+  elasticutils-ish things not supported by Sphinx, like passing ``F`` objects
+  to ``filter()``.

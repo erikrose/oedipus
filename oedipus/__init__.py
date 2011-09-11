@@ -16,6 +16,11 @@ import elasticutils
 import sphinxapi
 
 
+# 64-bit signed min and max, which are the bounds of Sphinx's range filters:
+MIN_LONG = -9223372036854775808
+MAX_LONG =  9223372036854775807
+
+
 log = logging.getLogger('oedipus')
 
 
@@ -69,6 +74,28 @@ class S(elasticutils.S):
         # If we ever need index boosting, weight_indices() might be nice.
         raise NotImplementedError
 
+    def filter(self, **kwargs):
+        """Restrict the query to results matching the given conditions.
+
+        This filter is ANDed with any previously requested ones.
+
+        """
+        return self._clone(next_step=('filter', kwargs.items()))
+
+    def exclude(self, **kwargs):
+        """Restrict the query to exclude results that match the given condition.
+
+        Takes only a single kwarg, because Sphinx can't OR filters together
+        (or, equivalently, exclude only documents which match all of several
+        criteria).
+
+        This exclusion is ANDed with any previously requested ones.
+
+        """
+        if len(kwargs) != 1:
+            raise TypeError('exclude() takes exactly 1 keyword argument.')
+        return self._clone(next_step=('exclude', kwargs.items()))
+
     def _sphinx(self):
         """Parametrize a SphinxClient to execute the query I represent, run it, and return it.
 
@@ -87,7 +114,7 @@ class S(elasticutils.S):
         sort = []
         fields = ['id']
         as_list = as_dict = False
-        # Things to call: SetFilter, SetFilterRange, Query, SetGroupBy
+        # Things to call: SetFilter, SetFilterRange, SetGroupBy
         for action, value in self.steps:
             if action == 'order_by':
                 # TODO
@@ -110,8 +137,10 @@ class S(elasticutils.S):
             elif action == 'query':
                 query = _sanitize_query(value)
             elif action == 'filter':
+                _set_filters(sphinx, value)
+            elif action == 'exclude':
                 # TODO
-                filters.extend(_process_filters(value))  # where we process range filters (and more)
+                pass
             else:
                 raise NotImplementedError(action)
 
@@ -191,3 +220,35 @@ def _sanitize_query(query):
     """Strip control characters that cause problems."""
     query = re.sub(r'(?<=\S)\-', '\-', query)
     return query.replace('^', '').replace('$', '')
+
+
+def _split(key):
+    """Split a key like ``foo__gte`` into ``('foo', 'gte')``.
+
+    Simple ``foo`` becomes ``('foo', '')``.
+
+    """
+    parts = key.rsplit('__', 1)
+    if len(parts) == 1:
+        parts.append('')
+    return parts
+
+
+def _set_filters(sphinx, keys_and_values):
+    """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
+    # TODO: This is pretty naive. Be smart: notice when you have both foo_gte
+    # and foo_lte, and mix them down to a single call to SetFilterRange().
+    for key, value in keys_and_values:
+        field, comparator = _split(key)
+        # Auto-listify ints for equality filters:
+        if not comparator and type(value) in [int, long]:
+            value = [value]
+
+        if not comparator or comparator == 'in':
+            sphinx.SetFilter(field, value)
+        elif comparator == 'gte':
+            sphinx.SetFilterRange(field, value, MAX_LONG)
+        elif comparator == 'lte':
+            sphinx.SetFilterRange(field, MIN_LONG, value)
+        else:
+            raise ValueError('"%s", in "%s__%s=%s", is not a supported comparator.' % (comparator, field, comparator, value))

@@ -31,10 +31,12 @@ def test_initialization(sphinx_client):
 
 @fudge.patch('sphinxapi.SphinxClient')
 def test_no_query(sphinx_client):
-    """Evaluating without calling query() should raise a SearchError."""
-    s = S(Biscuit)
-    # Should freak out since we didn't call query():
-    #assert_raises(SearchError, s._sphinx)
+    """Evaluating without calling query() should run an empty query."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('AddQuery').with_args('', 'biscuit')
+                  .expects('RunQueries').returns([dict(status=0, matches=[])]))
+    S(Biscuit).raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')

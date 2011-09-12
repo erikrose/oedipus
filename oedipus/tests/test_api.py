@@ -54,7 +54,7 @@ def test_simple_query(sphinx_client):
                   .is_a_stub()
                   .expects('AddQuery').with_args('gerbil', 'biscuit')
                   .expects('RunQueries').returns([dict(status=0, matches=[])]))
-    S(Biscuit).query(any_='^$gerbil', ignored_kwarg='dummy').raw()
+    S(Biscuit).query('^$gerbil', ignored_kwarg='dummy').raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')

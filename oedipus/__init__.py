@@ -47,7 +47,7 @@ class S(elasticutils.S):
     def facet(self, *args, **kwargs):
         raise NotImplementedError("Sphinx doesn't support faceting.")
 
-    def query(self, **kwargs):
+    def query(self, text, **kwargs):
         """Use the value of the ``any_`` kwarg as the query string.
 
         ElasticSearch supports restricting the search to individual fields, but
@@ -56,9 +56,7 @@ class S(elasticutils.S):
         and use it as the query string, ignoring any other kwargs.
 
         """
-        if 'any_' not in kwargs:
-            raise TypeError('query() must have an `any_` kwarg.')
-        return self._clone(next_step=('query', kwargs['any_']))
+        return self._clone(next_step=('query', text))
 
     def weight(self, **kwargs):
         """Set the weighting of matches per field.
@@ -238,16 +236,11 @@ class SphinxTolerantElastic(elasticutils.S):
     quickly between ElasticSearch and Sphinx.
 
     """
-    def query(self, **kwargs):
-        """Ignore any ``any_`` kwarg."""
-        # TODO: If you're feeling fancy, turn the any_ kwarg into an "or" query
-        # across all fields.
-        kw = kwargs.copy()
-        try:
-            del kw['any_']
-        except KeyError:
-            pass
-        super(ElasticS, self).query(**kw)
+    def query(self, text, **kwargs):
+        """Ignore any non-kw arg."""
+        # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
+        # across all fields, or use the all_ index, or something.
+        super(ElasticS, self).query(**kwargs)
 
 
 def _sanitize_query(query):

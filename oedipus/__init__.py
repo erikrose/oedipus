@@ -102,17 +102,12 @@ class S(elasticutils.S):
         if len(items) == 1:
             return self._clone(next_step=('exclude', items))
         if len(items) == 2:
-            gte_lte = ['lte', 'gte']
+            # Make sure they're a gte/lte pair on the same field:
             (field1, cmp1, val1), (field2, cmp2, val2) = items
             if field1 == field2:
                 cmps = {cmp1: val1, cmp2: val2}
                 if 'lte' in cmps and 'gte' in cmps:
-                    min, max = cmps['gte'], cmps['lte']
-                    if min <= max:
-                        return self._clone(
-                            next_step=('exclude', [(field1, 'RANGE', (min, max))]))
-                    else:
-                        raise ValueError
+                    return self._clone(next_step=('exclude', items))
         raise TypeError('exclude() takes exactly 1 keyword argument or a '
                         'pair of __lte/__gte arguments referencing the same '
                         'field.')
@@ -257,12 +252,30 @@ def _lookup_triples(dic):
     return [_split(key) + [value] for key, value in dic.items()]
 
 
+def _consolidate_ranges(triples):
+    """In a list of (field, comparand, value) triples, merge any lte/gte triples on the same field into a single ``RANGE`` triple.
+
+    Return a comprehensive iterable of triples.
+
+    """
+    inequalities = ['gte', 'lte']
+    d = {}  # {'color': {'gte': 0. 'lte': 10}}
+    for field, cmp, value in triples:
+        if cmp in inequalities:
+            d.setdefault(field, {})[cmp] = value
+        else:
+            yield field, cmp, value
+
+    for field, cmp_vals in d.iteritems():
+        if len(cmp_vals) == 2:
+            yield field, 'RANGE', (cmp_vals['gte'], cmp_vals['lte'])
+        else:  # There's only 1 comparator in there.
+            yield field, cmp_vals.keys()[0], cmp_vals.values()[0]
+
+
 def _set_filters(sphinx, keys_and_values, exclude=False):
     """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
-    # TODO: This is pretty naive. Be smart: notice when you have both foo_gte
-    # and foo_lte, and mix them down to a single call to SetFilterRange(), like
-    # we do in exclude().
-    for field, comparator, value in keys_and_values:
+    for field, comparator, value in _consolidate_ranges(keys_and_values):
         # Auto-listify ints for equality filters:
         if not comparator and type(value) in [int, long]:
             value = [value]

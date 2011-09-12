@@ -5,9 +5,10 @@ We mock out all Sphinx's APIs.
 """
 import fudge
 from nose import SkipTest
+from nose.tools import eq_
 import sphinxapi  # Comes in sphinx source code tarball
 
-from oedipus import S, MIN_LONG, MAX_LONG
+from oedipus import S, MIN_LONG, MAX_LONG, _consolidate_ranges
 
 
 no_results = [dict(status=0, matches=[])]  # empty Sphinx results
@@ -65,8 +66,8 @@ def test_single_filter(sphinx_client):
                   .expects('SetFilter').with_args('b', [2, 3], False)
 
                   # These 2 lines must be ordered such. Why? Fudge bug?
-                  .expects('SetFilterRange').with_args('d', MIN_LONG, 5, False)
                   .expects('SetFilterRange').with_args('c', 4, MAX_LONG, False)
+                  .expects('SetFilterRange').with_args('d', MIN_LONG, 5, False)
 
                   .expects('RunQueries').returns(no_results))
     S(Biscuit).filter(a=1,  # Test auto-listification of ints for equality filters.
@@ -102,6 +103,35 @@ def test_range_exclude(sphinx_client):
                   .expects('SetFilterRange').with_args('a', 1, 10, True)
                   .expects('RunQueries').returns(no_results))
     S(Biscuit).exclude(a__gte=1, a__lte=10).raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_range_filter(sphinx_client):
+    """Putting a gte and a lte exclusion on the same field in the same call should set a single filter range exclusion on the query.
+
+    Otherwise, there would be no way to say "Give me docs with X between 1 and
+    10."
+
+    """
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetFilterRange').with_args('a', 1, 10, False)
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).filter(a__gte=1, a__lte=10).raw()
+
+
+def test_consolidate_ranges():
+    """Assert that _consolidate_ranges() collapses lte/gte pairs."""
+    input = [('category', 'gte', 1),
+             ('category', 'lte', 10),
+             ('category', '', 5),
+             ('name', '', 'frank'),
+             ('pog', 'gte', 0)]
+    output = set([('category', 'RANGE', (1, 10)),
+                  ('category', '', 5),
+                  ('name', '', 'frank'),
+                  ('pog', 'gte', 0)])
+    eq_(set(_consolidate_ranges(input)), output)
 
 
 def test_chained_filters():

@@ -49,6 +49,14 @@ No Or-ing of Filters
 There's no way to "or" filters together in Sphinx, so oedipus does not support
 elasticutils' ``F`` objects.
 
+No ``gt`` or ``lt``
+-------------------
+
+oedipus supports ``gte`` and ``lte`` lookups but not ``gt`` or ``lt``, just
+because that's what Sphinx directly supports. Add it for integers if it bothers
+you. Floats (SetFilterFloatRange) are trickier.
+
+
 Running the Tests
 =================
 

@@ -80,23 +80,42 @@ class S(elasticutils.S):
         This filter is ANDed with any previously requested ones.
 
         """
-        return self._clone(next_step=('filter', kwargs.items()))
+        return self._clone(next_step=('filter', _lookup_triples(kwargs)))
 
     def exclude(self, **kwargs):
         """Restrict the query to exclude results that match the given condition.
 
-        Takes only a single kwarg, because Sphinx can't OR filters together
-        (or, equivalently, exclude only documents which match all of several
-        criteria). Taking multiple kwargs would imply that it could, assuming
-        parallel semantics with Django's ORM's ``exclude()``.
+        Typically takes only a single kwarg, because Sphinx can't OR filters
+        together (or, equivalently, exclude only documents which match all of
+        several criteria). Taking multiple arbitrary kwargs would imply that it
+        could, assuming parallel semantics with the Django ORM's ``exclude()``.
 
-        However, feel free to call ``exclude()`` more than once. Each exclusion
-        is ANDed with any previously requested ones.
+        However, closed range filters can have 2 kwargs: a ``__lte`` and a
+        ``__gte`` about the same field. These mix down to a single call to
+        SetFilterRange filter.
+
+        Feel free to call ``exclude()`` more than once. Each exclusion is ANDed
+        with any previously applied ones.
 
         """
-        if len(kwargs) != 1:
-            raise TypeError('exclude() takes exactly 1 keyword argument.')
-        return self._clone(next_step=('exclude', kwargs.items()))
+        items = _lookup_triples(kwargs)
+        if len(items) == 1:
+            return self._clone(next_step=('exclude', items))
+        if len(items) == 2:
+            gte_lte = ['lte', 'gte']
+            (field1, cmp1, val1), (field2, cmp2, val2) = items
+            if field1 == field2:
+                cmps = {cmp1: val1, cmp2: val2}
+                if 'lte' in cmps and 'gte' in cmps:
+                    min, max = cmps['gte'], cmps['lte']
+                    if min <= max:
+                        return self._clone(
+                            next_step=('exclude', [(field1, 'RANGE', (min, max))]))
+                    else:
+                        raise ValueError
+        raise TypeError('exclude() takes exactly 1 keyword argument or a '
+                        'pair of __lte/__gte arguments referencing the same '
+                        'field.')
 
     def _sphinx(self):
         """Parametrize a SphinxClient to execute the query I represent, run it, and return it.
@@ -223,24 +242,27 @@ def _sanitize_query(query):
     return query.replace('^', '').replace('$', '')
 
 
-def _split(key):
-    """Split a key like ``foo__gte`` into ``('foo', 'gte')``.
+def _lookup_triples(dic):
+    """Turn a kwargs dictionary into a triple of (field, comparator, value)."""
+    def _split(key):
+        """Split a key like ``foo__gte`` into ``('foo', 'gte')``.
 
-    Simple ``foo`` becomes ``('foo', '')``.
+        Simple ``foo`` becomes ``('foo', '')``.
 
-    """
-    parts = key.rsplit('__', 1)
-    if len(parts) == 1:
-        parts.append('')
-    return parts
+        """
+        parts = key.rsplit('__', 1)
+        if len(parts) == 1:
+            parts.append('')
+        return parts
+    return [_split(key) + [value] for key, value in dic.items()]
 
 
 def _set_filters(sphinx, keys_and_values, exclude=False):
     """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
     # TODO: This is pretty naive. Be smart: notice when you have both foo_gte
-    # and foo_lte, and mix them down to a single call to SetFilterRange().
-    for key, value in keys_and_values:
-        field, comparator = _split(key)
+    # and foo_lte, and mix them down to a single call to SetFilterRange(), like
+    # we do in exclude().
+    for field, comparator, value in keys_and_values:
         # Auto-listify ints for equality filters:
         if not comparator and type(value) in [int, long]:
             value = [value]
@@ -251,5 +273,8 @@ def _set_filters(sphinx, keys_and_values, exclude=False):
             sphinx.SetFilterRange(field, value, MAX_LONG, exclude)
         elif comparator == 'lte':
             sphinx.SetFilterRange(field, MIN_LONG, value, exclude)
+        elif comparator == 'RANGE':
+            # exclude() range with both min and max given:
+            sphinx.SetFilterRange(field, value[0], value[1], exclude)
         else:
             raise ValueError('"%s", in "%s__%s=%s", is not a supported comparator.' % (comparator, field, comparator, value))

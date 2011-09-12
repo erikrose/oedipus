@@ -89,6 +89,19 @@ def test_results_as_objects():
     """Results should come back as Django model objects by default."""
     # ...though we mock those model objects because we don't really want to
     # depend on Django; anything with a similar API should work.
+@fudge.patch('sphinxapi.SphinxClient')
+def test_range_exclude(sphinx_client):
+    """Putting a gte and a lte exclusion on the same field in the same call should set a single filter range exclusion on the query.
+
+    Otherwise, there would be no way to say "Give me docs with X between 1 and
+    10."
+
+    """
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetFilterRange').with_args('a', 1, 10, True)
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).exclude(a__gte=1, a__lte=10).raw()
 
 
 def test_chained_filters():

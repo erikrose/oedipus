@@ -231,6 +231,25 @@ class S(elasticutils.S):
         return results[0]['matches']
 
 
+class SphinxTolerantElastic(elasticutils.S):
+    """Thin wrapper around elasticutils' S which ignores Sphinx-specific hacks
+
+    Use this when you're using ElasticSearch if your project is flipping
+    quickly between ElasticSearch and Sphinx.
+
+    """
+    def query(self, **kwargs):
+        """Ignore any ``any_`` kwarg."""
+        # TODO: If you're feeling fancy, turn the any_ kwarg into an "or" query
+        # across all fields.
+        kw = kwargs.copy()
+        try:
+            del kw['any_']
+        except KeyError:
+            pass
+        super(ElasticS, self).query(**kw)
+
+
 def _sanitize_query(query):
     """Strip control characters that cause problems."""
     query = re.sub(r'(?<=\S)\-', '\-', query)

@@ -86,10 +86,6 @@ def test_single_exclude(sphinx_client):
     S(Biscuit).exclude(b__in=[2, 3]).raw()
 
 
-def test_results_as_objects():
-    """Results should come back as Django model objects by default."""
-    # ...though we mock those model objects because we don't really want to
-    # depend on Django; anything with a similar API should work.
 @fudge.patch('sphinxapi.SphinxClient')
 def test_range_exclude(sphinx_client):
     """Putting a gte and a lte exclusion on the same field in the same call should set a single filter range exclusion on the query.
@@ -136,6 +132,12 @@ def test_consolidate_ranges():
 
 def test_chained_filters():
     """Test several filter() calls ANDed together."""
+
+
+def test_results_as_objects():
+    """Results should come back as Django model objects by default."""
+    # ...though we mock those model objects because we don't really want to
+    # depend on Django; anything with a similar API should work.
 
 
 def test_filter_adapters():

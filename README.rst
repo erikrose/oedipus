@@ -31,12 +31,12 @@ inconsistent:
 * oedipus' ``query()`` takes a single keyword arg, ``any_``, which matches
   against all fields, Sphinx-style::
 
-  S(Animal).query(any_='gerbil')
+    S(Animal).query(any_='gerbil')
 
 * elasticutils' ``query()`` takes an arbitrary number of keyword args, one per
   field to match against::
 
-  S(Animal).query(title='gerbil')
+    S(Animal).query(title='gerbil')
 
 Thus, if you want to maintain the ability to switch quickly between Sphinx and
 ElasticSearch, simply combine the two::

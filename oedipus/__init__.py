@@ -243,7 +243,7 @@ class SphinxTolerantElastic(elasticutils.S):
         """Ignore any non-kw arg."""
         # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
         # across all fields, or use the all_ index, or something.
-        super(ElasticS, self).query(**kwargs)
+        super(SphinxTolerantElastic, self).query(**kwargs)
 
 
 def _sanitize_query(query):

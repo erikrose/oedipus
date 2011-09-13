@@ -6,6 +6,9 @@ import socket
 try:
     # Use Django settings if they're around:
     from django.conf import settings
+    # But Django can be around without the settings actually working, if the
+    # DJANGO_SETTINGS_MODULE isn't set.
+    getattr(settings, 'smoo', None)
 except ImportError:
     # Otherwise, come up with some defaults:
     class settings(object):

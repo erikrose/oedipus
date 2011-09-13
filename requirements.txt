@@ -1,0 +1,4 @@
+elasticutils
+nose
+fudge
+-e git+git://github.com/jsocol/sphinxapi.git#egg=sphinxapi

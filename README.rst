@@ -60,9 +60,13 @@ you. Floats (SetFilterFloatRange) are trickier.
 Running the Tests
 =================
 
-Do something like this::
+1. Install the packages listed in requirements.txt using pip::
 
-    DJANGO_SETTINGS_MODULE=kitsune.settings PYTHONPATH=/Users/erose/Checkouts/kitsune/vendor/src/elasticutils:/Users/erose/Checkouts/:/Users/erose/Checkouts/kitsune/vendor/packages/logilab-common:/Users/erose/Checkouts/kitsune/vendor/src/sphinxapi:. nosetests
+  pip install -r requirements.txt
+
+2. Run the tests using nose::
+
+  nosetests
 
 Beware that if you run the support.mozilla.com tests, they will clear out your
 Sphinx indices. Don't be surprised.

@@ -1,4 +1,4 @@
-elasticutils
+-e git+git://github.com/davedash/elasticutils.git#egg=elasticutils
 nose
 fudge
 -e git+git://github.com/jsocol/sphinxapi.git#egg=sphinxapi

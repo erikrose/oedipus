@@ -65,7 +65,8 @@ def test_single_filter(sphinx_client):
                   .expects('SetFilter').with_args('a', [1], False)
                   .expects('SetFilter').with_args('b', [2, 3], False)
 
-                  # These 2 lines must be ordered such. Why? Fudge bug?
+                  # These 2 lines must be ordered such because fudge assumes,
+                  # when you call one method twice, that order matters.
                   .expects('SetFilterRange').with_args('c', 4, MAX_LONG, False)
                   .expects('SetFilterRange').with_args('d', MIN_LONG, 5, False)
 

@@ -8,7 +8,7 @@ from nose import SkipTest
 from nose.tools import eq_
 import sphinxapi  # Comes in sphinx source code tarball
 
-from oedipus import S, MIN_LONG, MAX_LONG, _consolidate_ranges
+from oedipus import S, MIN_LONG, MAX_LONG
 
 
 no_results = [dict(status=0, matches=[])]  # empty Sphinx results
@@ -117,18 +117,6 @@ def test_range_filter(sphinx_client):
     S(Biscuit).filter(a__gte=1, a__lte=10).raw()
 
 
-def test_consolidate_ranges():
-    """Assert that _consolidate_ranges() collapses lte/gte pairs."""
-    input = [('category', 'gte', 1),
-             ('category', 'lte', 10),
-             ('category', '', 5),
-             ('name', '', 'frank'),
-             ('pog', 'gte', 0)]
-    output = set([('category', 'RANGE', (1, 10)),
-                  ('category', '', 5),
-                  ('name', '', 'frank'),
-                  ('pog', 'gte', 0)])
-    eq_(set(_consolidate_ranges(input)), output)
 
 
 def test_chained_filters():

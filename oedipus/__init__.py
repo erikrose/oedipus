@@ -113,12 +113,64 @@ class S(elasticutils.S):
                         'pair of __lte/__gte arguments referencing the same '
                         'field.')
 
+    @staticmethod
+    def _consolidate_ranges(triples):
+        """In a list of (field, comparand, value) triples, merge any lte/gte triples on the same field into a single ``RANGE`` triple.
+
+        Return a comprehensive iterable of triples.
+
+        """
+        inequalities = ['gte', 'lte']
+        d = {}  # {'color': {'gte': 0. 'lte': 10}}
+        for field, cmp, value in triples:
+            if cmp in inequalities:
+                d.setdefault(field, {})[cmp] = value
+            else:
+                yield field, cmp, value
+
+        for field, cmp_vals in d.iteritems():
+            if len(cmp_vals) == 2:
+                yield field, 'RANGE', (cmp_vals['gte'], cmp_vals['lte'])
+            else:  # There's only 1 comparator in there.
+                yield field, cmp_vals.keys()[0], cmp_vals.values()[0]
+
+    @classmethod
+    def _set_filters(cls, sphinx, keys_and_values, exclude=False):
+        """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
+        ranges = cls._consolidate_ranges(keys_and_values)
+        for field, comparator, value in ranges:
+            # Auto-listify ints for equality filters:
+            if not comparator and type(value) in [int, long]:
+                value = [value]
+
+            if not comparator or comparator == 'in':
+                sphinx.SetFilter(field, value, exclude)
+            elif comparator == 'gte':
+                sphinx.SetFilterRange(field, value, MAX_LONG, exclude)
+            elif comparator == 'lte':
+                sphinx.SetFilterRange(field, MIN_LONG, value, exclude)
+            elif comparator == 'RANGE':
+                # exclude() range with both min and max given:
+                sphinx.SetFilterRange(field, value[0], value[1], exclude)
+            else:
+                raise ValueError('"%s", in "%s__%s=%s", is not a supported '
+                                 'comparator.' %
+                                 (comparator, field, comparator, value))
+
+    @staticmethod
+    def _sanitize_query(query):
+        """Strip control characters that cause problems."""
+        query = re.sub(r'(?<=\S)\-', '\-', query)
+        return query.replace('^', '').replace('$', '')
+
     def _sphinx(self):
         """Parametrize a SphinxClient to execute the query I represent, run it, and return it.
 
         Doesn't support batched queries yet.
 
         """
+        # TODO: Refactor so we can do multiple searches without reopening the
+        # connection to Sphinx.
         sphinx = sphinxapi.SphinxClient()
         sphinx.SetServer(self.host, self.port)
         sphinx.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED2)
@@ -152,11 +204,11 @@ class S(elasticutils.S):
                     fields.extend(value)
                 as_list, as_dict = False, True
             elif action == 'query':
-                query = _sanitize_query(value)
+                query = self._sanitize_query(value)
             elif action == 'filter':
-                _set_filters(sphinx, value)
+                self._set_filters(sphinx, value)
             elif action == 'exclude':
-                _set_filters(sphinx, value, exclude=True)
+                self._set_filters(sphinx, value, exclude=True)
             else:
                 raise NotImplementedError(action)
 
@@ -177,15 +229,6 @@ class S(elasticutils.S):
 
 # Old ES stuff:
 #         qs = {}
-#         if len(filters) > 1:
-#             qs['filter'] = {'and': filters}
-#         elif filters:
-#             qs['filter'] = filters[0]
-#
-#         if len(queries) > 1:
-#             qs['query'] = {'bool': {'must': queries}}
-#         elif queries:
-#             qs['query'] = queries[0]
 #
 #         if fields:
 #             qs['fields'] = fields
@@ -246,12 +289,6 @@ class SphinxTolerantElastic(elasticutils.S):
         super(SphinxTolerantElastic, self).query(**kwargs)
 
 
-def _sanitize_query(query):
-    """Strip control characters that cause problems."""
-    query = re.sub(r'(?<=\S)\-', '\-', query)
-    return query.replace('^', '').replace('$', '')
-
-
 def _lookup_triples(dic):
     """Turn a kwargs dictionary into a triple of (field, comparator, value)."""
     def _split(key):
@@ -267,42 +304,3 @@ def _lookup_triples(dic):
     return [_split(key) + [value] for key, value in dic.items()]
 
 
-def _consolidate_ranges(triples):
-    """In a list of (field, comparand, value) triples, merge any lte/gte triples on the same field into a single ``RANGE`` triple.
-
-    Return a comprehensive iterable of triples.
-
-    """
-    inequalities = ['gte', 'lte']
-    d = {}  # {'color': {'gte': 0. 'lte': 10}}
-    for field, cmp, value in triples:
-        if cmp in inequalities:
-            d.setdefault(field, {})[cmp] = value
-        else:
-            yield field, cmp, value
-
-    for field, cmp_vals in d.iteritems():
-        if len(cmp_vals) == 2:
-            yield field, 'RANGE', (cmp_vals['gte'], cmp_vals['lte'])
-        else:  # There's only 1 comparator in there.
-            yield field, cmp_vals.keys()[0], cmp_vals.values()[0]
-
-
-def _set_filters(sphinx, keys_and_values, exclude=False):
-    """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
-    for field, comparator, value in _consolidate_ranges(keys_and_values):
-        # Auto-listify ints for equality filters:
-        if not comparator and type(value) in [int, long]:
-            value = [value]
-
-        if not comparator or comparator == 'in':
-            sphinx.SetFilter(field, value, exclude)
-        elif comparator == 'gte':
-            sphinx.SetFilterRange(field, value, MAX_LONG, exclude)
-        elif comparator == 'lte':
-            sphinx.SetFilterRange(field, MIN_LONG, value, exclude)
-        elif comparator == 'RANGE':
-            # exclude() range with both min and max given:
-            sphinx.SetFilterRange(field, value[0], value[1], exclude)
-        else:
-            raise ValueError('"%s", in "%s__%s=%s", is not a supported comparator.' % (comparator, field, comparator, value))

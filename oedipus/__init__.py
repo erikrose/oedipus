@@ -115,7 +115,7 @@ class S(elasticutils.S):
 
     @staticmethod
     def _extended_sort_fields(fields):
-        """Return the field expression that will make Sphinx sort by the given pseudo-fields in the SPH_SORT_EXTENDED mode.
+        """Return the field expressions to sort by the given pseudo-fields in SPH_SORT_EXTENDED mode.
 
         order_by() understands these types of pseudo-fields:
 
@@ -127,20 +127,21 @@ class S(elasticutils.S):
         If ``fields`` is empty, return ''.
 
         """
-        fields = fields[:]
-        # Replace each reference to @rank with @weight and @id:
-        for i, field in enumerate(fields):
-            if field == '@rank':
-                neg = ''
-            elif field == '-@rank':
-                neg = '-'
-            else:
-                continue
-            fields[i:i + 1] = [neg + '@weight', '@id']
+        def rank_expanded(fields):
+            """Return fields, replacing @rank with @weight/@id pairs."""
+            for f in fields:
+                if f == '@rank':
+                    yield '@weight'
+                    yield '@id'
+                elif f == '-@rank':
+                    yield '-@weight'
+                    yield '@id'
+                else:
+                    yield f
 
-        ret = [(f[1:] + ' DESC') if f.startswith('-') else (f + ' ASC')
-               for f in fields]
-        return ', '.join(ret)
+        return ', '.join((f[1:] + ' DESC') if f.startswith('-') else
+                         (f + ' ASC')
+                         for f in rank_expanded(fields))
 
     @staticmethod
     def _consolidate_ranges(triples):
@@ -211,7 +212,7 @@ class S(elasticutils.S):
         query = sort = ''
         fields = ['id']
         as_list = as_dict = False
-        # Things to call: SetFilter, SetFilterRange, SetGroupBy
+        # Things to call: SetGroupBy
         for action, value in self.steps:
             if action == 'order_by':
                 sort = self._extended_sort_fields(value)

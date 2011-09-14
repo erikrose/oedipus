@@ -39,7 +39,7 @@ def test_no_query(sphinx_client):
     (sphinx_client.expects_call().returns_fake()
                   .is_a_stub()
                   .expects('AddQuery').with_args('', 'biscuit')
-                  .expects('RunQueries').returns([dict(status=0, matches=[])]))
+                  .expects('RunQueries').returns(no_results))
     S(Biscuit).raw()
 
 
@@ -53,7 +53,7 @@ def test_simple_query(sphinx_client):
     (sphinx_client.expects_call().returns_fake()
                   .is_a_stub()
                   .expects('AddQuery').with_args('gerbil', 'biscuit')
-                  .expects('RunQueries').returns([dict(status=0, matches=[])]))
+                  .expects('RunQueries').returns(no_results))
     S(Biscuit).query('^$gerbil', ignored_kwarg='dummy').raw()
 
 
@@ -117,6 +117,39 @@ def test_range_filter(sphinx_client):
     S(Biscuit).filter(a__gte=1, a__lte=10).raw()
 
 
+@fudge.patch('sphinxapi.SphinxClient')
+def test_order_by_fields(sphinx_client):
+    """Test ordering by only field values."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetSortMode')
+                  .with_args(sphinxapi.SPH_SORT_EXTENDED, 'a ASC, b DESC')
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).order_by('a', '-b').raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_order_by_rank_explicitly(sphinx_client):
+    """Test mixing the @rank pseudo-field into the ``order_by()``."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetSortMode')
+                  .with_args(sphinxapi.SPH_SORT_EXTENDED,
+                             'a ASC, @weight DESC, @id ASC')
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).order_by('a', '-@rank').raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_order_by_default(sphinx_client):
+    """Assert that results order by rank by default."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetSortMode')
+                  .with_args(sphinxapi.SPH_SORT_EXTENDED,
+                             '@weight DESC, @id ASC')
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).raw()
 
 
 def test_chained_filters():

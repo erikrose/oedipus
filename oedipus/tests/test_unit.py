@@ -20,6 +20,7 @@ def test_consolidate_ranges():
 
 
 def test_extended_sort_fields():
+    """Make sure the expansion of the @rank pseudo-field works."""
     esf = S._extended_sort_fields
     eq_(esf(['fred', '-george', '-@rank']),
         'fred ASC, george DESC, @weight DESC, @id ASC')

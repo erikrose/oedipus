@@ -29,7 +29,7 @@ def test_initialization(sphinx_client):
                   .is_a_stub()  # Call other crap on it if you want; I don't care.
                   .expects('SetMatchMode').with_args(sphinxapi.SPH_MATCH_EXTENDED2)
                   .expects('SetRankingMode').with_args(sphinxapi.SPH_RANK_PROXIMITY_BM25)
-                  .expects('SetSortMode').with_args(sphinxapi.SPH_SORT_RELEVANCE, ''))
+                  .expects('SetSortMode').with_args(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC, @id ASC'))
     S(Biscuit)._sphinx()
 
 

@@ -32,10 +32,10 @@ class SearchError(Exception):
 
 
 # class SphinxDefaults(object):
-#     #: Say '@relevance' to sort by relevance. Can be a tuple or list to sort by
+#     #: Say '@rank' to sort by relevance. Can be a tuple or list to sort by
 #     #: one or more attributes. SPH_SORT_TIME_SEGMENTS and SPH_SORT_EXPR are
 #     #: not supported.
-#     ordering = '@relevance'
+#     ordering = '@rank'
 
 
 class S(elasticutils.S):
@@ -114,6 +114,35 @@ class S(elasticutils.S):
                         'field.')
 
     @staticmethod
+    def _extended_sort_fields(fields):
+        """Return the field expression that will make Sphinx sort by the given pseudo-fields in the SPH_SORT_EXTENDED mode.
+
+        order_by() understands these types of pseudo-fields:
+
+            * some_field (sort ascending)
+            * -some_field (sort descending)
+            * @rank (sort by rank ascending)
+            * -@rank (sort by rank descending--usually what you want)
+
+        If ``fields`` is empty, return ''.
+
+        """
+        fields = fields[:]
+        # Replace each reference to @rank with @weight and @id:
+        for i, field in enumerate(fields):
+            if field == '@rank':
+                neg = ''
+            elif field == '-@rank':
+                neg = '-'
+            else:
+                continue
+            fields[i:i + 1] = [neg + '@weight', '@id']
+
+        ret = [(f[1:] + ' DESC') if f.startswith('-') else (f + ' ASC')
+               for f in fields]
+        return ', '.join(ret)
+
+    @staticmethod
     def _consolidate_ranges(triples):
         """In a list of (field, comparand, value) triples, merge any lte/gte triples on the same field into a single ``RANGE`` triple.
 
@@ -179,19 +208,13 @@ class S(elasticutils.S):
         # Loop over `self.steps` to build the query format that will be sent to
         # ElasticSearch, and returns it as a dict.
         filters = []
-        query = ''
-        sort = []
+        query = sort = ''
         fields = ['id']
         as_list = as_dict = False
         # Things to call: SetFilter, SetFilterRange, SetGroupBy
         for action, value in self.steps:
             if action == 'order_by':
-                # TODO
-                for key in value:
-                    if key.startswith('-'):
-                        sort.append({key[1:]: 'desc'})
-                    else:
-                        sort.append(key)
+                sort = self._extended_sort_fields(value)
             elif action == 'values':
                 # TODO
                 fields.extend(value)
@@ -213,15 +236,13 @@ class S(elasticutils.S):
                 raise NotImplementedError(action)
 
         if not sort:
-            sort = getattr(self.meta, 'ordering', None) or self._default_sort()
+            sort = self._extended_sort_fields(
+                    (_listify(getattr(self.meta, 'ordering', [])) or
+                     self._default_sort()))
 
-        # Turn local state into parametrized SphinxClient:
-
-        # TODO: Support other search modes.
-        if type(sort) not in [list, tuple]:
-            sort = [sort]
-        if sort == ['@relevance']:
-            sphinx.SetSortMode(sphinxapi.SPH_SORT_RELEVANCE, '')
+        # EXTENDED is a superset of all the modes we care about, so we just use
+        # it all the time:
+        sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, sort)
 
         # Add query. This must be done after filters and such are set up, or
         # they may not apply.
@@ -232,8 +253,6 @@ class S(elasticutils.S):
 #
 #         if fields:
 #             qs['fields'] = fields
-#         if sort:
-#             qs['sort'] = sort
 #         if self.start:
 #             qs['from'] = self.start
 #         if self.stop is not None:
@@ -245,7 +264,7 @@ class S(elasticutils.S):
 
     def _default_sort(self):
         """Return the ordering to use if the SphinxMeta doesn't specify one."""
-        return '@relevance'
+        return ['-@rank']
 
     def raw(self):
         """Return the raw matches from the first (and only) query.
@@ -304,3 +323,7 @@ def _lookup_triples(dic):
     return [_split(key) + [value] for key, value in dic.items()]
 
 
+def _listify(maybe_list):
+    if type(maybe_list) in [list, tuple]:
+        return maybe_list
+    return [maybe_list]

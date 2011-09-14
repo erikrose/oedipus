@@ -57,6 +57,12 @@ because that's what Sphinx directly supports. Add it for integers if it bothers
 you. Floats (SetFilterFloatRange) are trickier.
 
 
+Other Behavior Notes
+====================
+
+``order_by()`` calls pave over the effect of previous ``order_by()`` calls.
+Ordering defaults to most-relevant-first.
+
 Running the Tests
 =================
 

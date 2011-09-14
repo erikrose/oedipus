@@ -17,3 +17,11 @@ def test_consolidate_ranges():
                   ('name', '', 'frank'),
                   ('pog', 'gte', 0)])
     eq_(set(S._consolidate_ranges(input)), output)
+
+
+def test_extended_sort_fields():
+    esf = S._extended_sort_fields
+    eq_(esf(['fred', '-george', '-@rank']),
+        'fred ASC, george DESC, @weight DESC, @id ASC')
+    # No reason to flip the ID sorting when sorting by ASC rank:
+    eq_(esf(['@rank']), '@weight ASC, @id ASC')

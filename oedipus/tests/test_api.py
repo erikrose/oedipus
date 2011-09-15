@@ -103,6 +103,18 @@ def test_range_exclude(sphinx_client):
 
 
 @fudge.patch('sphinxapi.SphinxClient')
+def test_chained_excludes(sphinx_client):
+    """Test combining excludes, and test remaining filter inversions."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetFilter').with_args('b', [2], True)
+                  .expects('SetFilterRange').with_args('c', 4, MAX_LONG, True)
+                  .expects('SetFilterRange').with_args('d', MIN_LONG, 5, True)
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).exclude(b=2).exclude(c__gte=4).exclude(d__lte=5).raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
 def test_range_filter(sphinx_client):
     """Putting a gte and a lte exclusion on the same field in the same call should set a single filter range exclusion on the query.
 
@@ -115,8 +127,6 @@ def test_range_filter(sphinx_client):
                   .expects('SetFilterRange').with_args('a', 1, 10, False)
                   .expects('RunQueries').returns(no_results))
     S(Biscuit).filter(a__gte=1, a__lte=10).raw()
-
-
 
 
 def test_chained_filters():

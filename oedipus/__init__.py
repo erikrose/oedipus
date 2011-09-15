@@ -49,6 +49,8 @@ class S(elasticutils.S):
 
     def facet(self, *args, **kwargs):
         raise NotImplementedError("Sphinx doesn't support faceting.")
+    raw_facets = facet
+    facets = property(facet)
 
     def query(self, text, **kwargs):
         """Use the value of the ``any_`` kwarg as the query string.

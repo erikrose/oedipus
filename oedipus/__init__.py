@@ -1,5 +1,5 @@
+import collections
 import logging
-import os
 import re
 import socket
 
@@ -164,16 +164,14 @@ class S(elasticutils.S):
             else:  # There's only 1 comparator in there.
                 yield field, cmp_vals.keys()[0], cmp_vals.values()[0]
 
-    @classmethod
-    def _set_filters(cls, sphinx, keys_and_values, exclude=False):
+    def _set_filters(self, sphinx, keys_and_values, exclude=False):
         """Set a series of filters on a SphinxClient according to some Django ORM-lookup-style key/value pairs."""
-        ranges = cls._consolidate_ranges(keys_and_values)
+        ranges = self._consolidate_ranges(keys_and_values)
         for field, comparator, value in ranges:
-            # Auto-listify ints for equality filters:
-            if not comparator and type(value) in [int, long]:
-                value = [value]
-
-            if not comparator or comparator == 'in':
+            value = self._apply_filter_mappings(field, value)
+            if not comparator:
+                sphinx.SetFilter(field, [value], exclude)
+            elif comparator == 'in':
                 sphinx.SetFilter(field, value, exclude)
             elif comparator == 'gte':
                 sphinx.SetFilterRange(field, value, MAX_LONG, exclude)
@@ -186,6 +184,17 @@ class S(elasticutils.S):
                 raise ValueError('"%s", in "%s__%s=%s", is not a supported '
                                  'comparator.' %
                                  (comparator, field, comparator, value))
+
+    def _apply_filter_mappings(self, name, value):
+        """Apply filter mappings to convert values to int."""
+        mappings = getattr(self.meta, 'filter_mapping', {})
+        converter = mappings.get(name, None)
+        if converter:
+            if (isinstance(value, collections.Iterable) and
+                not isinstance(value, basestring)):
+                return map(converter, value)
+            return converter(value)
+        return value
 
     @staticmethod
     def _sanitize_query(query):
@@ -208,7 +217,6 @@ class S(elasticutils.S):
 
         # Loop over `self.steps` to build the query format that will be sent to
         # ElasticSearch, and returns it as a dict.
-        filters = []
         query = sort = ''
         fields = ['id']
         as_list = as_dict = False

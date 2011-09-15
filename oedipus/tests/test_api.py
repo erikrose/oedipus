@@ -3,6 +3,8 @@
 We mock out all Sphinx's APIs.
 
 """
+import zlib
+
 import fudge
 from nose import SkipTest
 from nose.tools import eq_
@@ -11,8 +13,16 @@ import sphinxapi  # Comes in sphinx source code tarball
 from oedipus import S, MIN_LONG, MAX_LONG
 
 
+crc32 = lambda x: zlib.crc32(x.encode('utf-8')) & 0xffffffff
+
+
 no_results = [dict(status=0, matches=[])]  # empty Sphinx results
 
+
+def convert_str(value):
+    if isinstance(value, str):
+        return crc32(value)
+    return value
 
 class Biscuit(object):
     """An arbitrary adaptation key that S can map to a SearchModel"""
@@ -20,6 +30,9 @@ class Biscuit(object):
     class SphinxMeta(object):
         """Search metadata for Biscuit"""
         index = 'biscuit'
+        filter_mapping = {
+            'a': convert_str
+        }
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -153,6 +166,16 @@ def test_order_by_rank_explicitly(sphinx_client):
 
 
 @fudge.patch('sphinxapi.SphinxClient')
+def test_filter_string_mapping(sphinx_client):
+    """String values need to be mapped to ints for filtering."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetFilter').with_args('a', [crc32('test')], False)
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).filter(a='test').raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
 def test_order_by_default(sphinx_client):
     """Assert that results order by rank by default."""
     (sphinx_client.expects_call().returns_fake()
@@ -172,10 +195,6 @@ def test_results_as_objects():
     """Results should come back as Django model objects by default."""
     # ...though we mock those model objects because we don't really want to
     # depend on Django; anything with a similar API should work.
-
-
-def test_filter_adapters():
-    """You should be able to set up conversions of enumerations to hashes, for example."""
 
 
 def test_defaults():

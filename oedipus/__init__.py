@@ -282,7 +282,7 @@ class S(elasticutils.S):
         except socket.error, msg:
             log.error('Query socket error: %s' % msg)
             raise SearchError('Could not execute your search!')
-        except Exception, e:  # TODO: Don't catch SystemExit or KeyboardInterrupt.
+        except Exception, e:
             log.error('Sphinx threw an unknown exception: %s' % e)
             raise SearchError('Sphinx threw an unknown exception!')
 

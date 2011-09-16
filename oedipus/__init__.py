@@ -24,6 +24,18 @@ MIN_LONG = -9223372036854775808
 MAX_LONG =  9223372036854775807
 
 
+# min/max weights allow us to have a set of weight values that we can
+# translate to sphinx and elasticutils which both use different ranges
+# for weight values.
+#
+# FIXME - These are based on sphinx weight values used in kitsune.  If
+# we want to change it, we can do that.  If there are other consumers,
+# we can add an interface for the application to set the desired
+# range, too.
+MIN_WEIGHT = 1
+MAX_WEIGHT = 10
+
+
 log = logging.getLogger('oedipus')
 
 
@@ -64,16 +76,21 @@ class S(elasticutils.S):
     def weight(self, **kwargs):
         """Set the weighting of matches per field.
 
-        What should be the range of weights?
-
         Weights given here are added to any defaults or any previously
-        specified weights, though later references to the same field override
-        earlier ones. If we need to clear weights, add a ``clear_weights()``
+        specified weights, though later references to the same field
+        override earlier ones.
+
+        Weights range from ``MIN_WEIGHT`` to ``MAX_WEIGHT``.
+
+        Note: If we need to clear weights, add a ``clear_weights()``
         method.
 
+        Note: If we ever need index boosting, ``weight_indices()``
+        might be nice.
+
         """
-        # If we ever need index boosting, weight_indices() might be nice.
-        raise NotImplementedError
+        _check_weights(kwargs)
+        return self._clone(next_step=('weight', kwargs))
 
     def filter(self, **kwargs):
         """Restrict the query to results matching the given conditions.
@@ -219,6 +236,10 @@ class S(elasticutils.S):
         # ElasticSearch, and returns it as a dict.
         query = sort = ''
         fields = ['id']
+        try:
+            weights = dict(self.meta.weights)
+        except AttributeError:
+            weights = {}
         as_list = as_dict = False
         # Things to call: SetGroupBy
         for action, value in self.steps:
@@ -239,6 +260,8 @@ class S(elasticutils.S):
                 query = self._sanitize_query(value)
             elif action == 'filter':
                 self._set_filters(sphinx, value)
+            elif action == 'weight':
+                weights.update(value)
             elif action == 'exclude':
                 self._set_filters(sphinx, value, exclude=True)
             else:
@@ -256,6 +279,13 @@ class S(elasticutils.S):
         # Add query. This must be done after filters and such are set up, or
         # they may not apply.
         sphinx.AddQuery(query, self.meta.index)
+
+        # set the final set of weights here
+        if weights:
+            # weights are name -> field_weight where the field_weights
+            # are essentially ok for Sphinx, so we just pass them
+            # through.
+            sphinx.SetFieldWeights(weights)
 
 # Old ES stuff:
 #         qs = {}
@@ -330,6 +360,21 @@ def _lookup_triples(dic):
             parts.append('')
         return parts
     return [_split(key) + [value] for key, value in dic.items()]
+
+
+
+def _check_weights(weights):
+    """Verifies weight values are in the appropriate range.
+
+    :param weights: name -> field_weight dict
+
+    :raises ValueError: if a weight is not in the range
+    """
+    for key, value in weights.items():
+        if not (MIN_WEIGHT <= value <= MAX_WEIGHT):
+            raise ValueError('"%d" for field "%s" is outside of range of '
+                             '%d to %d' %
+                             (value, key, MIN_WEIGHT, MAX_WEIGHT))
 
 
 def _listify(maybe_list):

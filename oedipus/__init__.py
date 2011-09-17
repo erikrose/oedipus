@@ -378,6 +378,6 @@ def _check_weights(weights):
 
 
 def _listify(maybe_list):
-    if type(maybe_list) in [list, tuple]:
+    if isinstance(maybe_list, (list, tuple)):
         return maybe_list
     return [maybe_list]

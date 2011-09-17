@@ -24,23 +24,38 @@ def convert_str(value):
         return crc32(value)
     return value
 
+
+class BaseSphinxMeta(object):
+    """Search metadata for Biscuit classes"""
+    index = 'biscuit'
+    filter_mapping = {
+        'a': convert_str
+        }
+
 class Biscuit(object):
     """An arbitrary adaptation key that S can map to a SearchModel"""
 
-    class SphinxMeta(object):
-        """Search metadata for Biscuit"""
-        index = 'biscuit'
-        filter_mapping = {
-            'a': convert_str
-        }
+    SphinxMeta = BaseSphinxMeta
+
+
+class BiscuitOrderDefault(object):
+    """An arbitrary adaptation key that S can map to a SearchModel"""
+
+    class SphinxMeta(BaseSphinxMeta):
+        ordering = 'a'
+
+
+class BiscuitOrderDefaultList(object):
+    """An arbitrary adaptation key that S can map to a SearchModel"""
+
+    class SphinxMeta(BaseSphinxMeta):
+        ordering = ['a', 'b']
 
 
 class BiscuitWithWeight(object):
     """Biscuit with default weights"""
 
-    class SphinxMeta(object):
-        """Search metadata for BiscuitWithWeight"""
-        index = 'biscuit'
+    class SphinxMeta(BaseSphinxMeta):
         weights = {'a': 5, 'b': 5}
 
 
@@ -264,6 +279,30 @@ def test_order_by_default(sphinx_client):
                              '@weight DESC, @id ASC')
                   .expects('RunQueries').returns(no_results))
     S(Biscuit).raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_order_by_ordering_single(sphinx_client):
+    """Test ``ordering`` attribute with a single value."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetSortMode')
+                  .with_args(sphinxapi.SPH_SORT_EXTENDED,
+                             'a ASC')
+                  .expects('RunQueries').returns(no_results))
+    S(BiscuitOrderDefault).raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_order_by_ordering_list(sphinx_client):
+    """Test ``ordering`` attribute with list of values."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetSortMode')
+                  .with_args(sphinxapi.SPH_SORT_EXTENDED,
+                             'a ASC, b ASC')
+                  .expects('RunQueries').returns(no_results))
+    S(BiscuitOrderDefaultList).raw()
 
 
 def test_chained_filters():

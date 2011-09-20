@@ -10,7 +10,10 @@ common subset of functionality.
 Requirements
 ============
 
-* Not Django. oedipus has a few handy affordances for it but doesn't need it.
+* Django, unless you're willing to implement some of the Django model API on
+  your own model objects. There's no way to get useful non-integer information
+  out of Sphinx on its own, so we use the passed-in model objects to query a
+  secondary DB.
 * sphinxapi.py, the Python module from the Sphinx source code distribution
 * elasticutils, because we reuse some of its code
 
@@ -55,6 +58,12 @@ No ``gt`` or ``lt``
 oedipus supports ``gte`` and ``lte`` lookups but not ``gt`` or ``lt``, just
 because that's what Sphinx directly supports. Add it for integers if it bothers
 you. Floats (``SetFilterFloatRange()``) are trickier.
+
+``values()``
+------------
+
+If you call ``values()``, you must pass in a list of fields. In elasticutils,
+this is optional.
 
 
 Other Behavior Notes

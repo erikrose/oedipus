@@ -58,9 +58,24 @@ class S(elasticutils.S):
         self.meta = model.SphinxMeta
         self.host = host
         self.port = port
+        # Fields included in tuple and dict-formatted results:
+        self._fields = ()
+        self._results_class = ObjectResults
+        self._start, self._stop = None, None
+
+    def _clone(self, next_step=None):
+        new = super(S, self)._clone(next_step)
+        new.meta = self.meta
+        new.host = self.host
+        new.port = self.port
+        new._results_class = self._results_class
+        new._fields = self._fields
+        return new
 
     def facet(self, *args, **kwargs):
         raise NotImplementedError("Sphinx doesn't support faceting.")
+    raw_facets = facet
+    facets = property(facet)
 
     def query(self, text, **kwargs):
         """Use the value of the ``any_`` kwarg as the query string.
@@ -130,11 +145,35 @@ class S(elasticutils.S):
                         'pair of __lte/__gte arguments referencing the same '
                         'field.')
 
+    def values(self, *fields):
+        """Return a new ``S`` whose results are returned as a list of tuples.
+
+        Each tuple has an element for each field named in ``fields``.
+
+        """
+        if not fields:
+            raise TypeError('values() must be given a list of field names.')
+        return self._clone(next_step=('values', fields))
+
+    def count(self):
+        """Return the number of hits for the current query.
+
+        Can't avoid hitting the DB if we want accuracy, since Sphinx may
+        contain documents that have since been deleted from the DB.
+
+        """
+        return len(self._results())
+
+    __len__ = count
+
+    def __iter__(self):
+        return iter(self._results())
+
     @staticmethod
     def _extended_sort_fields(fields):
         """Return the field expressions to sort by the given pseudo-fields in SPH_SORT_EXTENDED mode.
 
-        order_by() understands these types of pseudo-fields:
+        ``order_by()`` understands these types of pseudo-fields:
 
             * some_field (sort ascending)
             * -some_field (sort descending)
@@ -241,21 +280,16 @@ class S(elasticutils.S):
         except AttributeError:
             weights = {}
         as_list = as_dict = False
-        # Things to call: SetGroupBy
+        # TODO: Something that calls SetGroupBy, perhaps
         for action, value in self.steps:
             if action == 'order_by':
                 sort = self._extended_sort_fields(value)
             elif action == 'values':
-                # TODO
-                fields.extend(value)
-                as_list, as_dict = True, False
+                self._fields = value
+                self._results_class = TupleResults
             elif action == 'values_dict':
-                # TODO
-                if not value:
-                    fields = []
-                else:
-                    fields.extend(value)
-                as_list, as_dict = False, True
+                self._fields = value
+                self._results_class = DictResults
             elif action == 'query':
                 query = self._sanitize_query(value)
             elif action == 'filter':
@@ -290,16 +324,23 @@ class S(elasticutils.S):
 # Old ES stuff:
 #         qs = {}
 #
-#         if fields:
-#             qs['fields'] = fields
 #         if self.start:
 #             qs['from'] = self.start
 #         if self.stop is not None:
 #             qs['size'] = self.stop - self.start
 #
-#         self.fields, self.as_list, self.as_dict = fields, as_list, as_dict
 #         return qs
         return sphinx
+
+    def _results(self):
+        """Return an iterable of results in whatever format was picked.
+
+        The format is determined by earlier calls to values() or values_dict().
+        The result supports len() as well.
+
+        """
+        raw = self.raw()  # side effect: sets _results_class and _fields
+        return self._results_class(self.type, raw, self._fields)
 
     def _default_sort(self):
         """Return the ordering to use if the SphinxMeta doesn't specify one."""
@@ -308,29 +349,32 @@ class S(elasticutils.S):
     def raw(self):
         """Return the raw matches from the first (and only) query.
 
-        If anything goes wrong, raise SearchError.
+        If anything goes wrong, raise SearchError. Cache the results. Calling
+        this after a SearchError will retry.
 
         """
-        sphinx = self._sphinx()
-        try:
-            results = sphinx.RunQueries()
-        except socket.timeout:
-            log.error('Query has timed out!')
-            raise SearchError('Query has timed out!')
-        except socket.error, msg:
-            log.error('Query socket error: %s' % msg)
-            raise SearchError('Could not execute your search!')
-        except Exception, e:
-            log.error('Sphinx threw an unknown exception: %s' % e)
-            raise SearchError('Sphinx threw an unknown exception!')
+        if self._results_cache is None:
+            sphinx = self._sphinx()
+            try:
+                self._results_cache = results = sphinx.RunQueries()
+            except socket.timeout:
+                log.error('Query has timed out!')
+                raise SearchError('Query has timed out!')
+            except socket.error, msg:
+                log.error('Query socket error: %s', msg)
+                raise SearchError('Could not execute your search!')
+            except Exception, e:
+                log.error('Sphinx threw an unknown exception: %s', e)
+                raise SearchError('Sphinx threw an unknown exception!')
 
-        if not results:
-            raise SearchError('Sphinx returned no results.')
-        if results[0]['status'] == sphinxapi.SEARCHD_ERROR:
-            raise SearchError('Sphinx had an error while performing a query.')
+            if not results:
+                raise SearchError('Sphinx returned no results.')
+            if results[0]['status'] == sphinxapi.SEARCHD_ERROR:
+                raise SearchError('Sphinx had an error while performing a '
+                                  'query.')
 
-        # Perhaps more than just the matches would be useful to return someday.
-        return results[0]['matches']
+        # We do only one query at a time; return the first one:
+        return self._results_cache[0]
 
 
 class SphinxTolerantElastic(elasticutils.S):
@@ -381,3 +425,77 @@ def _listify(maybe_list):
     if isinstance(maybe_list, (list, tuple)):
         return maybe_list
     return [maybe_list]
+
+
+class SearchResults(object):
+    """Results in the order in which they came out of Sphinx
+
+    Since Sphinx stores no non-numerical attributes, we have to reach into the
+    DB to pull them out.
+
+    """
+    def __init__(self, type, results, fields):
+        self.type = type
+        self.results = results
+        self.fields = fields  # tuple
+        matches = results['matches']
+        # Sphinx may return IDs of objects since deleted from the DB.
+        self.ids = [r['id'] for r in matches]
+        self.objects = dict(self._objects())  # {id: obj/tuple/dict, ...}
+
+    def _queryset(self):
+        """Return a QuerySet of the objects parallel to the found docs."""
+        return self.type.objects.filter(id__in=self.ids)
+
+    def __iter__(self):
+        """Iterate over results in the same order they came out of Sphinx."""
+        # Ripped off from elasticutils
+        return (self.objects[id] for id in self.ids if id in self.objects)
+
+    def __len__(self):
+        return len(self.objects)
+
+
+class DictResults(SearchResults):
+    """Results as an iterable of dictionaries"""
+    def _dicts_with_ids(self):
+        """Return an iterable of dicts with ``id`` attrs, each representing a matched DB object."""
+        fields = self.fields
+        # Append ID to the requested fields so we can keep track of object
+        # identity to sort by weight (or whatever Sphinx sorted by). We could
+        # optimize slightly by not prepending ID if the user already
+        # specifically asked for it, but then we'd have to keep track of its
+        # offset.
+        if fields and 'id' not in fields:
+            fields += ('id',)
+
+        # Get values rather than values_list, because we need to be able to
+        # find the ID afterward, and we don't want to have to go rooting around
+        # in the Django model to figure out what order the fields were declared
+        # in in the case that no fields were passed in.
+        return self._queryset().values(*fields)
+
+    def _objects(self):
+        """Return an iterable of (document ID, dict) pairs."""
+        should_strip_ids = self.fields and 'id' not in self.fields
+        for d in self._dicts_with_ids():
+            id = d.pop('id') if should_strip_ids else d['id']
+            yield id, d
+
+
+class TupleResults(DictResults):
+    """Results as an iterable of tuples, like Django's values_list()"""
+    def _objects(self):
+        """Return an iterable of (document ID, tuple) pairs."""
+        for d in self._dicts_with_ids():
+            yield d['id'], tuple(d[k] for k in self.fields)
+
+
+class ObjectResults(SearchResults):
+    """Results as an iterable of Django model-like objects"""
+    def _objects(self):
+        """Return an iterable of (document ID, model object) pairs."""
+        # Assuming the document ID is called "id" lets us depend on fewer
+        # Djangoisms than assuming it's the pk; we'd have to get
+        # self.type._meta to get the name of the pk.
+        return ((o.id, o) for o in self._queryset())

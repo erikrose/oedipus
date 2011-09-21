@@ -39,4 +39,4 @@ def test_connection_failure(sphinx_client):
     (sphinx_client.expects_call().returns_fake()
                   .is_a_stub()
                   .expects('RunQueries').returns(None))
-    assert_raises(SearchError, S(Biscuit).raw)
+    assert_raises(SearchError, S(Biscuit)._raw)

@@ -19,7 +19,7 @@ def test_weight_one(sphinx_client):
                   .expects('SetFieldWeights').with_args({'a': 1})
                   .expects('RunQueries')
                   .returns(no_results))
-    S(Biscuit).weight(a=1).raw()
+    S(Biscuit).weight(a=1)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -30,7 +30,7 @@ def test_weight_multiple(sphinx_client):
                   .expects('SetFieldWeights').with_args({'a': 1, 'b': 2})
                   .expects('RunQueries')
                   .returns(no_results))
-    S(Biscuit).weight(a=1, b=2).raw()
+    S(Biscuit).weight(a=1, b=2)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -45,7 +45,7 @@ def test_weight_chaining(sphinx_client):
                   .expects('SetFieldWeights').with_args({'a': 1, 'b': 2})
                   .expects('RunQueries')
                   .returns(no_results))
-    S(Biscuit).weight(a=1).weight(b=2).raw()
+    S(Biscuit).weight(a=1).weight(b=2)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -56,7 +56,7 @@ def test_weight_chaining_same_item(sphinx_client):
                   .expects('SetFieldWeights').with_args({'a': 2})
                   .expects('RunQueries')
                   .returns(no_results))
-    S(Biscuit).weight(a=1).weight(a=2).raw()
+    S(Biscuit).weight(a=1).weight(a=2)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -67,7 +67,7 @@ def test_weights_with_defaults(sphinx_client):
                   .expects('SetFieldWeights').with_args({'a': 5, 'b': 5})
                   .expects('RunQueries')
                   .returns(no_results))
-    S(BiscuitWithWeight).raw()
+    S(BiscuitWithWeight)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -78,4 +78,4 @@ def test_weights_with_defaults_and_change(sphinx_client):
                   .expects('SetFieldWeights').with_args({'a': 3, 'b': 5})
                   .expects('RunQueries')
                   .returns(no_results))
-    S(BiscuitWithWeight).weight(a=3).raw()
+    S(BiscuitWithWeight).weight(a=3)._raw()

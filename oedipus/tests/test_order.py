@@ -37,7 +37,7 @@ def test_order_by_fields(sphinx_client):
                   .expects('SetSortMode')
                   .with_args(sphinxapi.SPH_SORT_EXTENDED, 'a ASC, b DESC')
                   .expects('RunQueries').returns(no_results))
-    S(Biscuit).order_by('a', '-b').raw()
+    S(Biscuit).order_by('a', '-b')._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -49,7 +49,7 @@ def test_order_by_rank_explicitly(sphinx_client):
                   .with_args(sphinxapi.SPH_SORT_EXTENDED,
                              'a ASC, @weight DESC, @id ASC')
                   .expects('RunQueries').returns(no_results))
-    S(Biscuit).order_by('a', '-@rank').raw()
+    S(Biscuit).order_by('a', '-@rank')._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -61,7 +61,7 @@ def test_order_by_default(sphinx_client):
                   .with_args(sphinxapi.SPH_SORT_EXTENDED,
                              '@weight DESC, @id ASC')
                   .expects('RunQueries').returns(no_results))
-    S(Biscuit).raw()
+    S(Biscuit)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -73,7 +73,7 @@ def test_order_by_ordering_single(sphinx_client):
                   .with_args(sphinxapi.SPH_SORT_EXTENDED,
                              'a ASC')
                   .expects('RunQueries').returns(no_results))
-    S(BiscuitOrderDefault).raw()
+    S(BiscuitOrderDefault)._raw()
 
 
 @fudge.patch('sphinxapi.SphinxClient')
@@ -85,4 +85,4 @@ def test_order_by_ordering_list(sphinx_client):
                   .with_args(sphinxapi.SPH_SORT_EXTENDED,
                              'a ASC, b ASC')
                   .expects('RunQueries').returns(no_results))
-    S(BiscuitOrderDefaultList).raw()
+    S(BiscuitOrderDefaultList)._raw()

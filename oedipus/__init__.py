@@ -352,14 +352,14 @@ class S(object):
         The result supports len() as well.
 
         """
-        raw = self.raw()  # side effect: sets _results_class and _fields
+        raw = self._raw()  # side effect: sets _results_class and _fields
         return self._results_class(self.type, raw, self._fields)
 
     def _default_sort(self):
         """Return the ordering to use if the SphinxMeta doesn't specify one."""
         return ['-@rank']
 
-    def raw(self):
+    def _raw(self):
         """Return the raw matches from the first (and only) query.
 
         If anything goes wrong, raise SearchError. Cache the results. Calling

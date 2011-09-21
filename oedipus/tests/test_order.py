@@ -1,4 +1,5 @@
 import fudge
+from nose.tools import eq_
 import sphinxapi
 
 from oedipus import S
@@ -17,6 +18,15 @@ class BiscuitOrderDefaultList(object):
 
     class SphinxMeta(BaseSphinxMeta):
         ordering = ['a', 'b']
+
+
+def test_extended_sort_fields():
+    """Make sure the expansion of the @rank pseudo-field works."""
+    esf = S._extended_sort_fields
+    eq_(esf(['fred', '-george', '-@rank']),
+        'fred ASC, george DESC, @weight DESC, @id ASC')
+    # No reason to flip the ID sorting when sorting by ASC rank:
+    eq_(esf(['@rank']), '@weight ASC, @id ASC')
 
 
 @fudge.patch('sphinxapi.SphinxClient')

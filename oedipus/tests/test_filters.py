@@ -2,6 +2,7 @@
 
 import fudge
 from nose import SkipTest
+from nose.tools import eq_
 
 from oedipus import S, MIN_LONG, MAX_LONG
 from oedipus.tests import no_results, Biscuit, crc32
@@ -29,6 +30,20 @@ def test_simple_query(sphinx_client):
                   .expects('AddQuery').with_args('gerbil', 'biscuit')
                   .expects('RunQueries').returns(no_results))
     S(Biscuit).query('^$gerbil', ignored_kwarg='dummy').raw()
+
+
+def test_consolidate_ranges():
+    """Assert that _consolidate_ranges() collapses lte/gte pairs."""
+    input = [('category', 'gte', 1),
+             ('category', 'lte', 10),
+             ('category', '', 5),
+             ('name', '', 'frank'),
+             ('pog', 'gte', 0)]
+    output = set([('category', 'RANGE', (1, 10)),
+                  ('category', '', 5),
+                  ('name', '', 'frank'),
+                  ('pog', 'gte', 0)])
+    eq_(set(S._consolidate_ranges(input)), output)
 
 
 @fudge.patch('sphinxapi.SphinxClient')

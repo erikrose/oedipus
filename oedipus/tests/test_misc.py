@@ -41,8 +41,3 @@ def test_connection_failure(sphinx_client):
                   .is_a_stub()
                   .expects('RunQueries').returns(None))
     assert_raises(SearchError, S(Biscuit).raw)
-
-
-def test_defaults():
-    """Defaults from the metadata should be obeyed."""
-    raise SkipTest

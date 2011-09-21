@@ -128,6 +128,13 @@ def test_filter_string_mapping(sphinx_client):
     S(Biscuit).filter(a='test').raw()
 
 
-def test_chained_filters():
-    """Test several filter() calls ANDed together."""
-    raise SkipTest
+@fudge.patch('sphinxapi.SphinxClient')
+def test_chained_filters_and_excludes(sphinx_client):
+    """Test several filter() and exclude() calls ANDed together."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetFilter').with_args('a', [1], False)
+                  .expects('SetFilter').with_args('b', [2], False)
+                  .expects('SetFilter').with_args('c', [3], True)
+                  .expects('RunQueries').returns(no_results))
+    S(Biscuit).filter(a=1).filter(b=2).exclude(c=3).raw()

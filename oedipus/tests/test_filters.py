@@ -1,7 +1,6 @@
 """Tests for queries, filters, and excludes"""
 
 import fudge
-from nose import SkipTest
 from nose.tools import eq_
 
 from oedipus import S, MIN_LONG, MAX_LONG

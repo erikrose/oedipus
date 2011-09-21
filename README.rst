@@ -48,8 +48,10 @@ ElasticSearch, simply combine the two::
 No Or-ing of Filters
 --------------------
 
-There's no way to "or" filters together in Sphinx, so oedipus does not support
-elasticutils' ``F`` objects.
+There's no way to "or" arbitrary filters together in Sphinx, so oedipus does
+not support elasticutils' ``F`` objects. However, you can do ``__in`` filters::
+
+    S(Animal).filter(color__in=[12, 34, 56])
 
 No ``gt`` or ``lt``
 -------------------

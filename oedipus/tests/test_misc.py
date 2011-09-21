@@ -4,7 +4,6 @@ We mock out all Sphinx's APIs.
 
 """
 import fudge
-from nose import SkipTest
 from nose.tools import eq_, assert_raises
 import sphinxapi  # Comes in sphinx source code tarball
 

@@ -106,6 +106,11 @@ class S(object):
 
         This filter is ANDed with any previously requested ones.
 
+        If you pass something mutable as the value for any kwarg, please don't
+        mutate it later. The values are internalized by ``S`` objects (and
+        shared with their clones), and ``S`` objects are supposed to be
+        immutable.
+
         """
         return self._clone(next_step=('filter', _lookup_triples(kwargs)))
 
@@ -123,6 +128,11 @@ class S(object):
 
         Feel free to call ``exclude()`` more than once. Each exclusion is ANDed
         with any previously applied ones.
+
+        If you pass something mutable as the value for any kwarg, please don't
+        mutate it later. The values are internalized by ``S`` objects (and
+        shared with their clones), and ``S`` objects are supposed to be
+        immutable.
 
         """
         items = _lookup_triples(kwargs)

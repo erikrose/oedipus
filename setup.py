@@ -13,9 +13,8 @@ setup(
     url='http://github.com/erikrose/oedipus',
     include_package_data=True,
     zip_safe=False,
-    install_requires=['elasticutils'],
-    # TODO: Is the canonical sphinxsearch compatible? We seem to have made some
-    # changes in SUMO.
+    # TODO: Is the canonical sphinxapi compatible? We made some changes in
+    # SUMO.
     tests_require=['nose', 'fudge'],
     classifiers = [
         'Environment :: Web Environment',

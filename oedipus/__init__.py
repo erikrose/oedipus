@@ -15,7 +15,6 @@ except ImportError:
         SPHINX_HOST = '127.0.0.1'
         SPHINX_PORT = 3381
 
-import elasticutils
 import sphinxapi
 
 from oedipus.results import DictResults, TupleResults, ObjectResults
@@ -45,11 +44,12 @@ class SearchError(Exception):
     pass
 
 
-class S(elasticutils.S):
+class S(object):
     """A lazy query of Sphinx whose API is a subset of elasticutils.S"""
     def __init__(self, model, host=settings.SPHINX_HOST,
                               port=settings.SPHINX_PORT):
-        super(S, self).__init__(model)
+        self.type = model
+        self.steps = []
         self.meta = model.SphinxMeta
         self.host = host
         self.port = port
@@ -57,20 +57,19 @@ class S(elasticutils.S):
         self._fields = ()
         self._results_class = ObjectResults
         self._start, self._stop = None, None
+        self._results_cache = None
 
     def _clone(self, next_step=None):
-        new = super(S, self)._clone(next_step)
+        new = self.__class__(self.type)
+        new.steps = list(self.steps)
+        if next_step:
+            new.steps.append(next_step)
         new.meta = self.meta
         new.host = self.host
         new.port = self.port
         new._results_class = self._results_class
         new._fields = self._fields
         return new
-
-    def facet(self, *args, **kwargs):
-        raise NotImplementedError("Sphinx doesn't support faceting.")
-    raw_facets = facet
-    facets = property(facet)
 
     def query(self, text, **kwargs):
         """Use the value of the ``any_`` kwarg as the query string.
@@ -140,6 +139,24 @@ class S(elasticutils.S):
                         'pair of __lte/__gte arguments referencing the same '
                         'field.')
 
+    # TODO: Turn these into values() and values_list(), like Django.
+    def values_dict(self, *fields):
+        """Return a new S whose results will be returned as dictionaries."""
+        return self._clone(next_step=('values_dict', fields))
+
+    def order_by(self, *fields):
+        """Returns a new S with the field ordering changed.
+
+        ``order_by()`` takes these types of arguments:
+
+        * some_field (sort ascending)
+        * -some_field (sort descending)
+        * @rank (sort by rank ascending)
+        * -@rank (sort by rank descending--usually what you want)
+
+        """
+        return self._clone(next_step=('order_by', fields))
+
     def values(self, *fields):
         """Return a new ``S`` whose results are returned as a list of tuples.
 
@@ -168,14 +185,7 @@ class S(elasticutils.S):
     def _extended_sort_fields(fields):
         """Return the field expressions to sort by the given pseudo-fields in SPH_SORT_EXTENDED mode.
 
-        ``order_by()`` understands these types of pseudo-fields:
-
-            * some_field (sort ascending)
-            * -some_field (sort descending)
-            * @rank (sort by rank ascending)
-            * -@rank (sort by rank descending--usually what you want)
-
-        If ``fields`` is empty, return ''.
+        If ``fields`` is empty, return ''. See also ``order_by()``.
 
         """
         def rank_expanded(fields):
@@ -372,18 +382,23 @@ class S(elasticutils.S):
         return self._results_cache[0]
 
 
-class SphinxTolerantElastic(elasticutils.S):
-    """Thin wrapper around elasticutils' S which ignores Sphinx-specific hacks
+try:
+    import elasticutils
+except ImportError:
+    pass
+else:
+    class SphinxTolerantElastic(elasticutils.S):
+        """Shim around elasticutils' S which ignores Sphinx-specific hacks
 
-    Use this when you're using ElasticSearch if your project is flipping
-    quickly between ElasticSearch and Sphinx.
+        Use this when you're using ElasticSearch if your project is flipping
+        quickly between ElasticSearch and Sphinx.
 
-    """
-    def query(self, text, **kwargs):
-        """Ignore any non-kw arg."""
-        # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
-        # across all fields, or use the all_ index, or something.
-        super(SphinxTolerantElastic, self).query(**kwargs)
+        """
+        def query(self, text, **kwargs):
+            """Ignore any non-kw arg."""
+            # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
+            # across all fields, or use the all_ index, or something.
+            super(SphinxTolerantElastic, self).query(**kwargs)
 
 
 def _lookup_triples(dic):

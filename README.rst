@@ -15,7 +15,6 @@ Requirements
   out of Sphinx on its own, so we use the passed-in model objects to query a
   secondary DB.
 * sphinxapi.py, the Python module from the Sphinx source code distribution
-* elasticutils, because we reuse some of its code
 
 Limitations Compared to elasticutils
 ====================================
@@ -64,6 +63,11 @@ you. Floats (``SetFilterFloatRange()``) are trickier.
 
 If you call ``values()``, you must pass in a list of fields. In elasticutils,
 this is optional.
+
+Faceting
+--------
+
+There isn't any, because Sphinx doesn't support it.
 
 
 Other Behavior Notes

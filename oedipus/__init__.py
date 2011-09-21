@@ -279,12 +279,10 @@ class S(object):
         # Loop over `self.steps` to build the query format that will be sent to
         # ElasticSearch, and returns it as a dict.
         query = sort = ''
-        fields = ['id']
         try:
             weights = dict(self.meta.weights)
         except AttributeError:
             weights = {}
-        as_list = as_dict = False
         # TODO: Something that calls SetGroupBy, perhaps
         for action, value in self.steps:
             if action == 'order_by':

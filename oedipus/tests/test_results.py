@@ -5,7 +5,7 @@ from nose.tools import eq_, assert_raises
 
 from oedipus import S
 import oedipus.tests
-from oedipus.tests import no_results, Biscuit
+from oedipus.tests import Biscuit
 
 
 class SphinxMockingTestCase(TestCase):

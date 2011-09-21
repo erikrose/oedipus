@@ -14,9 +14,7 @@ def convert_str(value):
 class BaseSphinxMeta(object):
     """Search metadata for Biscuit classes"""
     index = 'biscuit'
-    filter_mapping = {
-        'a': convert_str
-        }
+    filter_mapping = {'a': convert_str}
 
 
 class QuerySet(list):

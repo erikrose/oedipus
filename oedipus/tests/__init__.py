@@ -1,3 +1,4 @@
+from unittest import TestCase
 import zlib
 
 
@@ -42,3 +43,30 @@ class Biscuit(object):
         model_cache.append(self)
 
     SphinxMeta = BaseSphinxMeta
+
+
+class SphinxMockingTestCase(TestCase):
+    """Testcase which mocks out Sphinx to return 2 results"""
+
+    def setUp(self):
+        Biscuit(id=123, color='red')
+        Biscuit(id=124, color='blue')
+
+    def tearDown(self):
+        global model_cache
+        model_cache = []
+
+    def mock_sphinx(self, sphinx_client):
+        # TODO: Do this in setUp() somehow.
+        (sphinx_client.expects_call().returns_fake()
+                      .is_a_stub()
+                      .expects('RunQueries').returns(
+                          [{'status': 0,
+                            'total': 2,
+                            'matches':
+                                [{'attrs': {'color': 3},
+                                 'id': 123,
+                                 'weight': 11111},
+                                 {'attrs': {'color': 4},
+                                  'id': 124,
+                                  'weight': 10000}]}]))

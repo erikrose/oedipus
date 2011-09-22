@@ -14,10 +14,12 @@ except ImportError:
     class settings(object):
         SPHINX_HOST = '127.0.0.1'
         SPHINX_PORT = 3381
+        SPHINX_MAX_RESULTS = 1000
 
 import sphinxapi
 
 from oedipus.results import DictResults, TupleResults, ObjectResults
+from oedipus.utils import lookup_triples, listify, mix_slices
 
 
 # 64-bit signed min and max, which are the bounds of Sphinx's range filters:
@@ -56,12 +58,12 @@ class S(object):
         # Fields included in tuple and dict-formatted results:
         self._fields = ()
         self._results_class = ObjectResults
-        self._start, self._stop = None, None
+        self._slice = slice(None, None)  # Either a slice or an int
         self._results_cache = None
 
     def _clone(self, next_step=None):
         new = self.__class__(self.type)
-        new.steps = list(self.steps)
+        new.steps = self.steps[:]
         if next_step:
             new.steps.append(next_step)
         new.meta = self.meta
@@ -69,7 +71,35 @@ class S(object):
         new.port = self.port
         new._results_class = self._results_class
         new._fields = self._fields
+        new._slice = self._slice
         return new
+
+    def __getitem__(self, k):
+        """Do a lazy slice of myself, or return a single item from my results.
+
+        :arg k: If a number, return an actual single result. If a slice, return
+            a new ``S`` with the requested slice bounds taken into account. If
+            my results have already been fetched, return a real list of
+            results, sliced as requested.
+
+        Haven't bothered to do the thinking to support slice steps or negative
+        slice components yet.
+
+        """
+        if self._results_cache is not None:
+            return self._results_cache[k]
+
+        if isinstance(k, slice):  # k is a slice, so we can be lazy.
+            new = self._clone()
+            # Compute a single slice out of any we already have & the new one:
+            new._slice = mix_slices(new._slice, k)
+            return new
+        else:  # k is a number.
+            # We must fetch results.
+            self._slice = mix_slices(self._slice, k)
+            # And then _sphinx() responds to _slice being a number by getting a
+            # single result, which we return:
+            return list(self)[0]
 
     def query(self, text, **kwargs):
         """Use the value of the ``any_`` kwarg as the query string.
@@ -112,7 +142,7 @@ class S(object):
         immutable.
 
         """
-        return self._clone(next_step=('filter', _lookup_triples(kwargs)))
+        return self._clone(next_step=('filter', lookup_triples(kwargs)))
 
     def exclude(self, **kwargs):
         """Restrict the query to exclude results that match the given condition.
@@ -135,7 +165,7 @@ class S(object):
         immutable.
 
         """
-        items = _lookup_triples(kwargs)
+        items = lookup_triples(kwargs)
         if len(items) == 1:
             return self._clone(next_step=('exclude', items))
         if len(items) == 2:
@@ -316,7 +346,7 @@ class S(object):
 
         if not sort:
             sort = self._extended_sort_fields(
-                    (_listify(getattr(self.meta, 'ordering', [])) or
+                    (listify(getattr(self.meta, 'ordering', [])) or
                      self._default_sort()))
 
         # EXTENDED is a superset of all the modes we care about, so we just use
@@ -334,15 +364,18 @@ class S(object):
             # through.
             sphinx.SetFieldWeights(weights)
 
-# Old ES stuff:
-#         qs = {}
-#
-#         if self.start:
-#             qs['from'] = self.start
-#         if self.stop is not None:
-#             qs['size'] = self.stop - self.start
-#
-#         return qs
+        # Convert the slice (or int) to limits:
+        if isinstance(self._slice, slice):
+            if self._slice != slice(None, None):
+                start = self._slice.start or 0
+                stop = self._slice.stop
+                sphinx.SetLimits(
+                    start,
+                    SPHINX_MAX_RESULTS if stop is None else (stop - start))
+            # else don't bother settings limits
+        else:  # self._slice is a number.
+            sphinx.SetLimits(self._slice, 1)
+
         return sphinx
 
     def _results(self):
@@ -409,21 +442,6 @@ else:
             super(SphinxTolerantElastic, self).query(**kwargs)
 
 
-def _lookup_triples(dic):
-    """Turn a kwargs dictionary into a triple of (field, comparator, value)."""
-    def _split(key):
-        """Split a key like ``foo__gte`` into ``('foo', 'gte')``.
-
-        Simple ``foo`` becomes ``('foo', '')``.
-
-        """
-        parts = key.rsplit('__', 1)
-        if len(parts) == 1:
-            parts.append('')
-        return parts
-    return [_split(key) + [value] for key, value in dic.items()]
-
-
 
 def _check_weights(weights):
     """Verifies weight values are in the appropriate range.
@@ -437,9 +455,3 @@ def _check_weights(weights):
             raise ValueError('"%d" for field "%s" is outside of range of '
                              '%d to %d' %
                              (value, key, MIN_WEIGHT, MAX_WEIGHT))
-
-
-def _listify(maybe_list):
-    if isinstance(maybe_list, (list, tuple)):
-        return maybe_list
-    return [maybe_list]

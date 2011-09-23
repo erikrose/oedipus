@@ -1,5 +1,5 @@
 def lookup_triples(dic):
-    """Turn a kwargs dictionary into a triple of (field, comparator, value)."""
+    """Turn a kwargs dict into a list of triples of (field, comparator, value)."""
     def _split(key):
         """Split a key like ``foo__gte`` into ``('foo', 'gte')``.
 

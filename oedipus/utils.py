@@ -51,5 +51,4 @@ def mix_slices(j, k):
                    key=none_is_infinity)
 
         return slice(jstart + kstart, stop)
-    else:
-        return jstart + k
+    return jstart + k

@@ -105,3 +105,16 @@ def test_slice_limit_setting(sphinx_client):
                   .expects('RunQueries').returns(no_results))
     s = S(Biscuit)[5:20][2:7]
     list(s)  # Iterate to concretize.
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+def test_slice_caching(sphinx_client):
+    """Slicing shouldn't re-query if the results have already been fetched."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetLimits').times_called(1)
+                  .expects('RunQueries').returns(no_results).times_called(1))
+    # All these slice bounds are arbitrary:
+    s = S(Biscuit)[2:20]
+    list(s)  # Force it to do the query.
+    list(s[:4])  # Reslice and iterate, tempting it to re-query.

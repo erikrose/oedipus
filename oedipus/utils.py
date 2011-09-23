@@ -1,5 +1,5 @@
 def lookup_triples(dic):
-    """Turn a kwargs dictionary into a triple of (field, comparator, value)."""
+    """Turn a kwargs dict into a list of triples of (field, comparator, value)."""
     def _split(key):
         """Split a key like ``foo__gte`` into ``('foo', 'gte')``.
 
@@ -9,8 +9,8 @@ def lookup_triples(dic):
         parts = key.rsplit('__', 1)
         if len(parts) == 1:
             parts.append('')
-        return parts
-    return [_split(key) + [value] for key, value in dic.items()]
+        return tuple(parts)
+    return [_split(key) + (value,) for key, value in dic.items()]
 
 
 def listify(maybe_list):

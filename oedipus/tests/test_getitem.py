@@ -8,6 +8,21 @@ from oedipus.tests import no_results, Biscuit, SphinxMockingTestCase
 from oedipus.utils import mix_slices
 
 
+# A single Sphinx search result--just the "red" object:
+red_results = [{'status': 0,
+                'total': 1,
+                'matches':
+                     [{'attrs': {},
+                       'id': 123,
+                       'weight': 11111}]}]
+blue_results = [{'status': 0,
+                 'total': 1,
+                 'matches':
+                      [{'attrs': {},
+                        'id': 124,
+                        'weight': 11111}]}]
+
+
 def _test_mixing(j, k):
     """Assert that ``[0..20][mix_slices(j, k)] == [0..20][j][k]``."""
     seq = range(10)
@@ -86,14 +101,22 @@ class ConcreteSlicingTestCase(SphinxMockingTestCase):
         (sphinx_client.expects_call().returns_fake()
                       .is_a_stub()
                       .expects('SetLimits').with_args(3, 1)
-                      .expects('RunQueries').returns(
-                          [{'status': 0,
-                            'total': 1,
-                            'matches':
-                                 [{'attrs': {},
-                                   'id': 123,
-                                   'weight': 11111}]}]))
+                      .expects('RunQueries').returns(red_results))
         eq_(S(Biscuit)[3].color, 'red')
+
+    @fudge.patch('sphinxapi.SphinxClient')
+    def test_index_doesnt_ruin_s(self, sphinx_client):
+        """Make sure asking for a single item doesn't wreck future attempts to take other slices of an ``S``."""
+        (sphinx_client.expects_call().returns_fake()
+                      .is_a_stub()
+                      .remember_order()
+                      .expects('SetLimits').with_args(4, 1)
+                      .expects('RunQueries').returns(red_results)
+                      .expects('SetLimits').with_args(5, 1)
+                      .expects('RunQueries').returns(blue_results))
+        s = S(Biscuit)
+        s[4]
+        s[5]
 
 
 @fudge.patch('sphinxapi.SphinxClient')

@@ -55,10 +55,13 @@ class S(object):
         self.meta = model.SphinxMeta
         self.host = host
         self.port = port
-        # Fields included in tuple and dict-formatted results:
+        # Fields included in tuple- and dict-formatted results:
         self._fields = ()
         self._results_class = ObjectResults
-        self._slice = slice(None, None)  # Either a slice or an int
+        # _slice is either a slice or an int. It's allowed to become an int
+        # only if we never expose the resulting S, since it's impossible to do
+        # further __getitem__() calls after that.
+        self._slice = slice(None, None)
         self._results_cache = None
 
     def _clone(self, next_step=None):
@@ -89,17 +92,15 @@ class S(object):
         if self._results_cache is not None:
             return self._results_cache[k]
 
+        new = self._clone()
+        # Compute a single slice out of any we already have & the new one:
+        new._slice = mix_slices(new._slice, k)
         if isinstance(k, slice):  # k is a slice, so we can be lazy.
-            new = self._clone()
-            # Compute a single slice out of any we already have & the new one:
-            new._slice = mix_slices(new._slice, k)
             return new
-        else:  # k is a number.
-            # We must fetch results.
-            self._slice = mix_slices(self._slice, k)
-            # And then _sphinx() responds to _slice being a number by getting a
-            # single result, which we return:
-            return list(self)[0]
+        else:  # k is a number; we must fetch results.
+            # _sphinx() responds to _slice being a number by getting a single
+            # result, which we return (or have an IndexError about):
+            return list(new)[0]
 
     def query(self, text, **kwargs):
         """Use the value of the ``any_`` kwarg as the query string.

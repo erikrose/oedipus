@@ -370,9 +370,10 @@ class S(object):
             if self._slice != slice(None, None):
                 start = self._slice.start or 0
                 stop = self._slice.stop
-                sphinx.SetLimits(
-                    start,
-                    SPHINX_MAX_RESULTS if stop is None else (stop - start))
+                max_results = (settings.SPHINX_MAX_RESULTS if stop is None
+                               else (stop - start))
+
+                sphinx.SetLimits(start, max_results)
             # else don't bother settings limits
         else:  # self._slice is a number.
             sphinx.SetLimits(self._slice, 1)

@@ -40,3 +40,20 @@ def test_connection_failure(sphinx_client):
                   .is_a_stub()
                   .expects('RunQueries').returns(None))
     assert_raises(SearchError, S(Biscuit)._raw)
+
+
+@fudge.patch('sphinxapi.SphinxClient')
+@fudge.patch('oedipus.settings')
+def test_sphinx_max_results_clips(sphinx_client, settings):
+    """Test SPHINX_MAX_RESULTS affects results."""
+    settings.has_attr(SPHINX_MAX_RESULTS=5)
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetLimits').with_args(0, 5)
+                  .expects('RunQueries').returns(no_results))
+
+    # SPHINX_MAX_RESULTS only comes into play if there's no
+    # stop in the slice.
+    s = S(Biscuit)[0:]
+    # Do this to trigger the results.
+    s.count()

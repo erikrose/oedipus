@@ -1,8 +1,10 @@
+import collections
 import fudge
 from nose.tools import eq_, assert_raises
 
 from oedipus import S
 from oedipus.tests import Biscuit, SphinxMockingTestCase
+from oedipus.results import ObjectResults, DictResults, TupleResults
 
 
 class ResultsTestCase(SphinxMockingTestCase):
@@ -68,3 +70,49 @@ class ResultsTestCase(SphinxMockingTestCase):
         """An empty values() call should raise ``TypeError``."""
         s = S(Biscuit)
         assert_raises(TypeError, s.values)
+
+
+def test_object_content_for_fields():
+    TestResult = collections.namedtuple('TestResult', ['field1', 'field2'])
+    content = ObjectResults.content_for_fields(
+        TestResult('1', '2'),
+        ['field1', 'field2'],
+        ['field1', 'field2'])
+    eq_(content, ('1', '2'))
+
+    # Test the case where fields != highlight_fields.
+    content = ObjectResults.content_for_fields(
+        TestResult('4', '5'),
+        ['field1', 'field2'],
+        ['field1'])
+    eq_(content, ('4',))
+
+
+def test_tuple_content_for_fields():
+    content = TupleResults.content_for_fields(
+        ('1', '2'),
+        ['field1', 'field2'],
+        ['field1', 'field2'])
+    eq_(content, ('1', '2'))
+
+    # Test the case where fields != highlight_fields.
+    content = TupleResults.content_for_fields(
+        ('1', '2'),
+        ['field1', 'field2'],
+        ['field1'])
+    eq_(content, ('1',))
+
+
+def test_dict_content_for_fields():
+    content = DictResults.content_for_fields(
+        {'field1': '1', 'field2': '2'},
+        ['field1', 'field2'],
+        ['field1', 'field2'])
+    eq_(content, ('1', '2'))
+
+    # Test the case where fields != highlight_fields.
+    content = DictResults.content_for_fields(
+        {'field1': '1', 'field2': '2'},
+        ['field1', 'field2'],
+        ['field1'])
+    eq_(content, ('1',))

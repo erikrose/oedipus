@@ -46,6 +46,10 @@ class SearchError(Exception):
     pass
 
 
+class ExcerptError(Exception):
+    pass
+
+
 class S(object):
     """A lazy query of Sphinx whose API is a subset of elasticutils.S"""
     def __init__(self, model, host=settings.SPHINX_HOST,
@@ -63,6 +67,9 @@ class S(object):
         # further __getitem__() calls after that.
         self._slice = slice(None, None)
         self._results_cache = None
+        self._highlight_fields = []
+        self._highlight_options = {}
+        self._query = None
 
     def _clone(self, next_step=None):
         new = self.__class__(self.type)
@@ -75,6 +82,8 @@ class S(object):
         new._results_class = self._results_class
         new._fields = self._fields
         new._slice = self._slice
+        new._highlight_fields = self._highlight_fields
+        new._highlight_options = self._highlight_options
         return new
 
     def __getitem__(self, k):
@@ -131,6 +140,32 @@ class S(object):
         """
         _check_weights(kwargs)
         return self._clone(next_step=('weight', kwargs))
+
+    def highlight(self, *highlight_fields, **kwargs):
+        """Set highlight/excerpting with specified options.
+
+        Note: This highlight will override previous highlights.
+
+        Note: This won't let you clear it--we'd need to write a
+        ``clear_highlight()``.
+
+        * ``highlight_fields`` -- The list of fields to highlight.
+          Needs to be a subset of fields.
+
+        Additional keyword options:
+
+        * ``before_match`` -- HTML for before the match.
+        * ``after_match`` -- HTML for after the match.
+        * ``limit`` -- Number of symbols in the excerpt snippet.
+
+        The additional options can be defined on ``SphinxMeta`` with
+        ``excerpt_`` + option name.  For example, ``excerpt_limit``.
+
+        :returns: The new ``S``.
+
+        """
+        return self._clone(next_step=('highlight',
+                                      (highlight_fields, kwargs)))
 
     def filter(self, **kwargs):
         """Restrict the query to results matching the given conditions.
@@ -218,6 +253,47 @@ class S(object):
         return len(self._results())
 
     __len__ = count
+
+    def excerpt(self, result):
+        """Take a result and return the excerpt as a string.
+
+        :raises ExcerptError: Raises an ``ExcerptError`` if ``excerpt``
+            was called before results were calculated or if
+            ``highlight_fields`` is not a subset of ``fields``.
+
+        """
+        # This catches the case where results haven't been calculated.
+        # That could happen if the results from one S were used in a
+        # call to excerpt on a new S.
+        if self._results_cache is None:
+            raise ExcerptError(
+                'excerpt called before results have been calculated.')
+
+        highlight_fields = self._highlight_fields
+
+        if not set(highlight_fields).issubset(set(self._fields)):
+            raise ExcerptError(
+                'highlight_fields isn\'t a subset of fields %r %r' %
+                (highlight_fields, self._fields))
+
+        docs = self._results_class.content_for_fields(
+            result, self._fields, highlight_fields)
+
+        # Note that this requires the option names in
+        # _highlight_options to exactly match the option names in
+        # Sphinx BuildExcerpts.
+        options = {}
+        for mem in ('before_match', 'after_match', 'limit'):
+            if mem in self._highlight_options:
+                options[mem] = self._highlight_options[mem]
+            elif hasattr(self.meta, 'excerpt_' + mem):
+                options[mem] = getattr(self.meta, 'excerpt_' + mem)
+
+        sphinx = self._sphinx()
+        excerpt = sphinx.BuildExcerpt(docs, self.meta.index, self._query,
+                                      options)
+
+        return excerpt
 
     def __iter__(self):
         return iter(self._results())
@@ -340,6 +416,10 @@ class S(object):
                 self._set_filters(sphinx, value)
             elif action == 'weight':
                 weights.update(value)
+            elif action == 'highlight':
+                fields, options = value
+                self._highlight_fields = fields
+                self._highlight_options.update(options)
             elif action == 'exclude':
                 self._set_filters(sphinx, value, exclude=True)
             else:
@@ -356,6 +436,7 @@ class S(object):
 
         # Add query. This must be done after filters and such are set up, or
         # they may not apply.
+        self._query = query
         sphinx.AddQuery(query, self.meta.index)
 
         # set the final set of weights here
@@ -442,7 +523,6 @@ else:
             # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
             # across all fields, or use the all_ index, or something.
             super(SphinxTolerantElastic, self).query(**kwargs)
-
 
 
 def _check_weights(weights):

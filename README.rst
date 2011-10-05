@@ -81,6 +81,38 @@ Faceting
 There isn't any, because Sphinx doesn't support it.
 
 
+SphinxMeta
+==========
+
+oedipus supports ``SphinxMeta`` class defined on the model with the
+following attributes:
+
+``index``
+
+    The index to use.
+
+``filter_mapping``
+
+    Dict mapping field name to converter to use.
+
+``weights``
+
+    Dict mapping field name to weight
+
+``ordering``
+
+    Single string for which field to sort by, or list of fields to
+    sort by.
+
+``excerpt_*``
+
+    Excerpt-related values to use.
+
+    * ``excerpt_before_match`` -- text to go before an excerpt
+    * ``excerpt_after_match`` -- text to go after an exceprt
+    * ``excerpt_limit`` -- limit of characters in an excerpt
+
+
 Other Behavior Notes
 ====================
 

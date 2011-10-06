@@ -113,6 +113,15 @@ following attributes:
     * ``excerpt_after_match`` -- text to go after an exceprt
     * ``excerpt_limit`` -- limit of characters in an excerpt
 
+``group_by``
+
+    Tuple of (field to group on, sort order).
+
+    Examples::
+
+        group_by = ('a', '@group')
+        group_by = ('a', '-@group')
+
 
 Other Behavior Notes
 ====================

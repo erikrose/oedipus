@@ -233,6 +233,18 @@ class S(object):
         """
         return self._clone(next_step=('order_by', fields))
 
+    def group_by(self, attribute, groupsort='-@group'):
+        """Returns a new ``S`` with field grouping changed.
+
+        ``group_by()`` takes these arguments:
+
+        :param attribute: The attribute to group on.
+        :param groupsort: How the results in the final result set get
+            sorted.  e.g. ``@group``, ``-@group``
+
+        """
+        return self._clone(next_step=('group_by', (attribute, groupsort)))
+
     def values(self, *fields):
         """Return a new ``S`` whose results are returned as a list of tuples.
 
@@ -397,13 +409,18 @@ class S(object):
         # ElasticSearch, and returns it as a dict.
         query = sort = ''
         try:
+            group_by = self.meta.group_by
+        except AttributeError:
+            group_by = None
+        try:
             weights = dict(self.meta.weights)
         except AttributeError:
             weights = {}
-        # TODO: Something that calls SetGroupBy, perhaps
         for action, value in self.steps:
             if action == 'order_by':
                 sort = self._extended_sort_fields(value)
+            elif action == 'group_by':
+                group_by = value
             elif action == 'values':
                 self._fields = value
                 self._results_class = TupleResults
@@ -433,6 +450,10 @@ class S(object):
         # EXTENDED is a superset of all the modes we care about, so we just use
         # it all the time:
         sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, sort)
+
+        if group_by is not None:
+            sphinx.SetGroupBy(group_by[0], sphinxapi.SPH_GROUPBY_ATTR,
+                              self._extended_sort_fields([group_by[1]]))
 
         # Add query. This must be done after filters and such are set up, or
         # they may not apply.

@@ -2,11 +2,12 @@
 oedipus
 =======
 
-oedipus is a friendlier API for the Sphinx search server. It presents
-a similar API to elasticutils, giving you the option of switching back
-and forth between Sphinx and elasticsearch at the flip of a switch, as
-long as you stick to the common subset of functionality.
+oedipus is a friendlier API for the Sphinx search server. It presents a similar
+API to elasticutils_, giving you the option of switching back and forth
+between Sphinx and elasticsearch at the flip of a switch, as long as you stick
+to the common subset of functionality.
 
+.. _elasticutils: https://github.com/davedash/elasticutils
 
 Requirements
 ============

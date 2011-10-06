@@ -1,4 +1,4 @@
 -e git+git://github.com/davedash/elasticutils.git#egg=elasticutils
-nose
-fudge
+nose==1.1.2
+fudge==1.0.3
 -e git+git://github.com/jsocol/sphinxapi.git#egg=sphinxapi

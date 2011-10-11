@@ -57,8 +57,8 @@ class S(object):
         self.type = model
         self.steps = []
         self.meta = model.SphinxMeta
-        self.host = host
-        self.port = port
+        self._host = host
+        self._port = port
         # Fields included in tuple- and dict-formatted results:
         self._fields = ()
         self._results_class = ObjectResults
@@ -77,14 +77,28 @@ class S(object):
         if next_step:
             new.steps.append(next_step)
         new.meta = self.meta
-        new.host = self.host
-        new.port = self.port
+        new._host = self._host
+        new._port = self._port
         new._results_class = self._results_class
         new._fields = self._fields
         new._slice = self._slice
         new._highlight_fields = self._highlight_fields
         new._highlight_options = self._highlight_options
         return new
+
+    @property
+    def host(self):
+        """Return the hostname where Sphinx lives.
+
+        Overridable in case you need this to differ at test time, for instance
+
+        """
+        return self._host
+
+    @property
+    def port(self):
+        """Return the port number where Sphinx is listening."""
+        return self._port
 
     def __getitem__(self, k):
         """Do a lazy slice of myself, or return a single item from my results.

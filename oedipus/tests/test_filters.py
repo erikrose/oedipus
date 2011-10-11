@@ -127,6 +127,21 @@ def test_filter_string_mapping(sphinx_client):
     S(Biscuit).filter(a='test')._raw()
 
 
+def test_bool_mapping():
+    """Booleans should be mashed down into ints by default."""
+    # Fudge doesn't compare harshly enough to make False != 0, so we do this as
+    # a unit test of _filter_value_to_int().
+    s = S(Biscuit)
+    assert s._filter_value_to_int('some_bool', False) is 0
+    assert s._filter_value_to_int('some_bool', True) is 1
+
+    # Make sure the int cast is applied even to members of iterables:
+    array = s._filter_value_to_int('some_bool', [True, False])
+    eq_(type(array[0]), int)
+    eq_(type(array[1]), int)
+    eq_(array, [1, 0])
+
+
 @fudge.patch('sphinxapi.SphinxClient')
 def test_chained_filters_and_excludes(sphinx_client):
     """Test several filter() and exclude() calls ANDed together."""

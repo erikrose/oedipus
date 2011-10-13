@@ -502,7 +502,10 @@ class S(object):
 
         """
         raw = self._raw()  # side effect: sets _results_class and _fields
-        return self._results_class(self.type, raw, self._fields)
+        return self._results_class(self.type,
+                                   getattr(self.meta, 'id_field', 'id'),
+                                   raw,
+                                   self._fields)
 
     def _default_sort(self):
         """Return the ordering to use if the SphinxMeta doesn't specify one."""

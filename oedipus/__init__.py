@@ -467,11 +467,6 @@ class S(object):
             sphinx.SetGroupBy(group_by[0], sphinxapi.SPH_GROUPBY_ATTR,
                               self._extended_sort_fields([group_by[1]]))
 
-        # Add query. This must be done after filters and such are set up, or
-        # they may not apply.
-        self._query = query
-        sphinx.AddQuery(query, self.meta.index)
-
         # set the final set of weights here
         if weights:
             # weights are name -> field_weight where the field_weights
@@ -491,6 +486,11 @@ class S(object):
             # else don't bother settings limits
         else:  # self._slice is a number.
             sphinx.SetLimits(self._slice, 1)
+
+        # Add query. This must be done last because otherwise things don't
+        # work.
+        self._query = query
+        sphinx.AddQuery(query, self.meta.index)
 
         return sphinx
 

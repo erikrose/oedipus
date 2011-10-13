@@ -5,13 +5,11 @@ class SearchResults(object):
     DB to pull them out.
 
     """
-    def __init__(self, type, id_field, results, fields):
+    def __init__(self, type, ids, fields):
         self.type = type
-        self.results = results
-        self.fields = fields  # tuple
-        matches = results['matches']
         # Sphinx may return IDs of objects since deleted from the DB.
-        self.ids = [r[id_field] for r in matches]
+        self.ids = ids
+        self.fields = fields  # tuple
         self.objects = dict(self._objects())  # {id: obj/tuple/dict, ...}
 
     def _queryset(self):

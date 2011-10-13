@@ -503,7 +503,14 @@ class S(object):
 
         """
         raw = self._raw()  # side effect: sets _results_class and _fields
-        return self._results_class(self.type, raw, self._fields)
+        results = raw['matches']
+
+        if hasattr(self.meta, 'id_field'):
+            field = self.meta.id_field
+            ids = [r['attrs'][field] for r in results]
+        else:
+            ids = [r['id'] for r in results]
+        return self._results_class(self.type, ids, self._fields)
 
     def _default_sort(self):
         """Return the ordering to use if the SphinxMeta doesn't specify one."""

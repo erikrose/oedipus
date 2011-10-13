@@ -92,6 +92,12 @@ following attributes:
 
     The index to use.
 
+``id_field``
+
+    The name of the attribute holding the ID of the DB object which should be
+    returned by search results. You don't need to specify this unless the
+    object ID differs from the Sphinx document ID.
+
 ``filter_mapping``
 
     Dict mapping field name to converter to use.

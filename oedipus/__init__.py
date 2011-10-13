@@ -487,8 +487,9 @@ class S(object):
         else:  # self._slice is a number.
             sphinx.SetLimits(self._slice, 1)
 
-        # Add query. This must be done last because otherwise things don't
-        # work.
+        # Add query. This must be done after filters and such are set up, or
+        # they may not apply. That's true of limits, too. This should
+        # probably be last.
         self._query = query
         sphinx.AddQuery(query, self.meta.index)
 

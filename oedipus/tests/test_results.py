@@ -3,7 +3,7 @@ import fudge
 from nose.tools import eq_, assert_raises
 
 from oedipus import S
-from oedipus.tests import Biscuit, SphinxMockingTestCase
+from oedipus.tests import Biscuit, SphinxMockingTestCase, BaseSphinxMeta
 from oedipus.results import ObjectResults, DictResults, TupleResults
 
 
@@ -70,6 +70,29 @@ class ResultsTestCase(SphinxMockingTestCase):
         """An empty values() call should raise ``TypeError``."""
         s = S(Biscuit)
         assert_raises(TypeError, s.values)
+
+    @fudge.patch('sphinxapi.SphinxClient')
+    def test_id_field(self, sphinx_client):
+        """Assert that fetching results gets its object ID from the attr named by SphinxMeta.field_id, if present."""
+        (sphinx_client.expects_call().returns_fake()
+                      .is_a_stub()
+                      .expects('RunQueries').returns(
+                          [{'status': 0,
+                            'total': 2,
+                            'matches':
+                                [{'attrs': {'thing_id': 123},
+                                 'id': 3,
+                                 'weight': 11111},
+                                 {'attrs': {'thing_id': 124},
+                                  'id': 4,
+                                  'weight': 10000}]}]))
+
+        class FunnyIdBiscuit(Biscuit):
+            class SphinxMeta(BaseSphinxMeta):
+                id_field = 'thing_id'
+
+        results = list(S(FunnyIdBiscuit).values('color'))
+        eq_(results, [('red',), ('blue',)])
 
 
 def test_object_content_for_fields():

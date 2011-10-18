@@ -316,8 +316,8 @@ class S(object):
                 options[mem] = getattr(self.meta, 'excerpt_' + mem)
 
         sphinx = self._sphinx()
-        excerpt = sphinx.BuildExcerpt(docs, self.meta.index, self._query,
-                                      options)
+        excerpt = sphinx.BuildExcerpts(
+            list(docs), self.meta.index, self._query, options)
 
         return excerpt
 

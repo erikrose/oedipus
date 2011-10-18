@@ -124,8 +124,8 @@ class TestExcerpt(BiscuitTestCase):
         (sphinx_client.expects_call()
                       .returns_fake()
                       .is_a_stub()
-                      .expects('BuildExcerpt')
-                      .with_args(('sesame', 'has sesame foo'),
+                      .expects('BuildExcerpts')
+                      .with_args(['sesame', 'has sesame foo'],
                                  'biscuit',
                                  'foo',
                                  {'before_match': '<i>',
@@ -184,8 +184,8 @@ class TestExcerpt(BiscuitTestCase):
         (sphinx_client.expects_call()
                       .returns_fake()
                       .is_a_stub()
-                      .expects('BuildExcerpt')
-                      .with_args(('has sesame foo',),
+                      .expects('BuildExcerpts')
+                      .with_args(['has sesame foo'],
                                  'biscuit',
                                  'foo',
                                  {'before_match': '<i>',

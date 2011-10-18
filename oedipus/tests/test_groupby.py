@@ -51,6 +51,18 @@ def test_group_by_override(sphinx_client):
 
 
 @fudge.patch('sphinxapi.SphinxClient')
+def test_group_by_multiple_bits(sphinx_client):
+    """Test group by with multiple bits."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('SetGroupBy')
+                  .with_args('a', sphinxapi.SPH_GROUPBY_ATTR, '@relevance DESC, age ASC')
+                  .expects('RunQueries')
+                  .returns(no_results))
+    S(Biscuit).group_by('a', ('-@relevance', 'age'))._raw()
+
+
+@fudge.patch('sphinxapi.SphinxClient')
 def test_group_by_sphinxmeta(sphinx_client):
     """Test group by from SphinxMeta."""
     (sphinx_client.expects_call().returns_fake()

@@ -254,7 +254,7 @@ class S(object):
 
         :param attribute: The attribute to group on.
         :param groupsort: How the results in the final result set get
-            sorted.  e.g. ``@group``, ``-@group``
+            sorted.  e.g. ``'@group'``, ``'-@group'``, ``('@group', 'age')``
 
         """
         return self._clone(next_step=('group_by', (attribute, groupsort)))
@@ -464,8 +464,11 @@ class S(object):
         sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, sort)
 
         if group_by is not None:
+            sort_field = group_by[1]
+            if not isinstance(sort_field, (tuple, list)):
+                sort_field = [sort_field]
             sphinx.SetGroupBy(group_by[0], sphinxapi.SPH_GROUPBY_ATTR,
-                              self._extended_sort_fields([group_by[1]]))
+                              self._extended_sort_fields(sort_field))
 
         # set the final set of weights here
         if weights:

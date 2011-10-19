@@ -43,6 +43,18 @@ def test_connection_failure(sphinx_client):
 
 
 @fudge.patch('sphinxapi.SphinxClient')
+def test_query_error(sphinx_client):
+    """[] should get returned when the query has an error."""
+    (sphinx_client.expects_call().returns_fake()
+                  .is_a_stub()
+                  .expects('RunQueries').returns([{
+                    'status': 1,
+                    'warning': '',
+                    'error': 'index questions: syntax error'}]))
+    eq_(S(Biscuit)._raw(), {'matches': []})
+
+
+@fudge.patch('sphinxapi.SphinxClient')
 @fudge.patch('oedipus.settings')
 def test_sphinx_max_results_clips(sphinx_client, settings):
     """Test SPHINX_MAX_RESULTS affects results."""
@@ -57,3 +69,9 @@ def test_sphinx_max_results_clips(sphinx_client, settings):
     s = S(Biscuit)[0:]
     # Do this to trigger the results.
     s.count()
+
+
+def test_sanitize_query():
+    """Tests _sanitize_query."""
+    sq = S._sanitize_query
+    eq_(sq('google.com/iq'), 'google.com\\/iq')

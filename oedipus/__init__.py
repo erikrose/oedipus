@@ -402,6 +402,7 @@ class S(object):
     def _sanitize_query(query):
         """Strip control characters that cause problems."""
         query = re.sub(r'(?<=\S)\-', '\-', query)
+        query = query.replace('/', '\\/')
         return query.replace('^', '').replace('$', '')
 
     def _sphinx(self):
@@ -543,8 +544,9 @@ class S(object):
             if not results:
                 raise SearchError('Sphinx returned no results.')
             if results[0]['status'] == sphinxapi.SEARCHD_ERROR:
-                raise SearchError('Sphinx had an error while performing a '
-                                  'query.')
+                log.error('Sphinx errored while performing a query: %r',
+                          results[0]['error'])
+                return {'matches': []}
 
         # We do only one query at a time; return the first one:
         return self._results_cache[0]

@@ -126,12 +126,12 @@ class S(object):
             return list(new)[0]
 
     def query(self, text, **kwargs):
-        """Use the value of the ``any_`` kwarg as the query string.
+        """Use the given text as the query string. Ignore **kwargs.
 
         ElasticSearch supports restricting the search to individual fields, but
         Sphinx just takes a string and searches all fields. To present an
-        elasticutils-compatible API, we take only the ``any_``  kwarg's value
-        and use it as the query string, ignoring any other kwargs.
+        elasticutils-compatible API, we take only the first positional arg and
+        use it as the query string, ignoring any kwargs.
 
         """
         return self._clone(next_step=('query', text))
@@ -426,7 +426,7 @@ class S(object):
         except AttributeError:
             group_by = None
         try:
-            weights = dict(self.meta.weights)
+            weights = dict(self.meta.weights)  # TODO: Drop support for putting these on SphinxMeta so ppl aren't prevented from transition to elasticutils, which doesn't support that.
         except AttributeError:
             weights = {}
         for action, value in self.steps:
@@ -557,17 +557,29 @@ try:
 except ImportError:
     pass
 else:
-    class SphinxTolerantElastic(elasticutils.S):
+    class ElasticS(elasticutils.S):
         """Shim around elasticutils' S which ignores Sphinx-specific hacks
 
-        Use this when you're using ElasticSearch if your project is flipping
-        quickly between ElasticSearch and Sphinx.
+        Use this when you are using ElasticSearch but your project might change
+        back to Sphinx.
 
         """
         def query(self, text, **kwargs):
-            """Ignore any non-kw arg."""
-            # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
-            # across all fields, or use the all_ index, or something.
+            """Perform a Sphinx or ElasticSearch query.
+
+            If no kwargs are passed, match ``text`` against an ORed combination
+            of the default fields specified with ``querying_fields()``. This
+            allows you to use ES in a simple, Sphinxlike way if your needs are
+            simple or you're in the middle of a migration.
+
+            If any kwargs are passed, ignore ``text``, and send the kwargs
+            directly to elasticutils instead. This lets you do fancy ES-only
+            stuff when ES is on, falling back to simple Sphinxlike stuff when
+            it's not.
+
+            """
+            # Someday, you might want to remember the all_ index. That's why I
+            # mention it here.
             super(SphinxTolerantElastic, self).query(**kwargs)
 
 

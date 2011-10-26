@@ -21,9 +21,6 @@ class SearchResults(object):
         # Ripped off from elasticutils
         return (self.objects[id] for id in self.ids if id in self.objects)
 
-    def __len__(self):
-        return len(self.objects)
-
 
 class DictResults(SearchResults):
     """Results as an iterable of dictionaries"""

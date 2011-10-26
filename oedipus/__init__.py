@@ -272,11 +272,15 @@ class S(object):
     def count(self):
         """Return the number of hits for the current query.
 
-        Can't avoid hitting the DB if we want accuracy, since Sphinx may
-        contain documents that have since been deleted from the DB.
+        .. Note::
+
+           This tells you the number of docs that match the Sphinx
+           search.  If your Sphinx index is out of sync with your DB,
+           then this won't be accurate.
 
         """
-        return len(self._results())
+        raw = self._raw()
+        return len(raw['matches'])
 
     __len__ = count
 

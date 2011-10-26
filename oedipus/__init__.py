@@ -269,6 +269,18 @@ class S(object):
             raise TypeError('values() must be given a list of field names.')
         return self._clone(next_step=('values', fields))
 
+    def object_ids(self):
+        """Returns a list of object ids from Sphinx matches."""
+        raw = self._raw()  # side effect: sets _results_class and _fields
+        results = raw['matches']
+
+        if hasattr(self.meta, 'id_field'):
+            field = self.meta.id_field
+            ids = [r['attrs'][field] for r in results]
+        else:
+            ids = [r['id'] for r in results]
+        return ids
+
     def count(self):
         """Return the number of hits for the current query.
 
@@ -518,14 +530,7 @@ class S(object):
         The result supports len() as well.
 
         """
-        raw = self._raw()  # side effect: sets _results_class and _fields
-        results = raw['matches']
-
-        if hasattr(self.meta, 'id_field'):
-            field = self.meta.id_field
-            ids = [r['attrs'][field] for r in results]
-        else:
-            ids = [r['id'] for r in results]
+        ids = self.object_ids()
         return self._results_class(self.type, ids, self._fields)
 
     def _default_sort(self):

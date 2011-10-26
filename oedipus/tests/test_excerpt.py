@@ -13,6 +13,7 @@ class BiscuitTestCase(TestCase):
     def setUp(self):
         Biscuit(id=123, name='sesame', content='has sesame foo')
         Biscuit(id=124, name='dog', content='biscuit fit for a dog')
+        Biscuit(id=125, name='cup', content='has sesame fa\xc3\xa7on foo')
 
     def tearDown(self):
         oedipus.tests.model_cache = []
@@ -149,6 +150,38 @@ class TestExcerpt(BiscuitTestCase):
 
         results = list(s)
         s.excerpt(results[0])
+
+    @fudge.patch('sphinxapi.SphinxClient')
+    def test_excerpt_with_unicode(self, sphinx_client):
+        """Test excerpt with all fields highlighted."""
+        (sphinx_client.expects_call()
+                      .returns_fake()
+                      .is_a_stub()
+                      .expects('BuildExcerpts')
+                      .with_args(['has sesame fa\xc3\xa7on foo'],
+                                 'biscuit',
+                                 'foo',
+                                 {'before_match': '<i>',
+                                  'after_match': '</i>'})
+                      .returns(
+                          [('has sesame fa\xc3\xa7on <i>foo</i>',)])
+                      .expects('RunQueries')
+                      .returns(
+                          [{'status': 0,
+                            'total': 2,
+                            'matches':
+                              [{'attrs': {'name': 3, 'content': 4},
+                                'id': 125, 'weight': 11111}]
+                          }]))
+
+        s = (S(Biscuit).query('foo')
+                       .highlight('content',
+                                  before_match='<i>',
+                                  after_match='</i>')
+                       .values('content'))
+
+        results = list(s)
+        eq_(s.excerpt(results[0])[0], u'has sesame fa\xe7on <i>foo</i>')
 
     @fudge.patch('sphinxapi.SphinxClient')
     def test_naughty_excerpt_throws_error(self, sphinx_client):

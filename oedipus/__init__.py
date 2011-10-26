@@ -281,7 +281,8 @@ class S(object):
     __len__ = count
 
     def excerpt(self, result):
-        """Take a result and return the excerpt as a string.
+        """Take a result and return the excerpt as a list of
+        unicodes--one for each highlight_field in the order specified.
 
         :raises ExcerptError: Raises an ``ExcerptError`` if ``excerpt``
             was called before results were calculated or if
@@ -318,6 +319,13 @@ class S(object):
         sphinx = self._sphinx()
         excerpt = sphinx.BuildExcerpts(
             list(docs), self.meta.index, self._query, options)
+
+        # We only excerpt one result, so peel it out of the list.
+        excerpt = excerpt[0]
+
+        # TODO: This assumes the data is in utf-8 which it might not
+        # be depending on the backing database configuration.
+        excerpt = [e.decode('utf-8') for e in excerpt]
 
         return excerpt
 

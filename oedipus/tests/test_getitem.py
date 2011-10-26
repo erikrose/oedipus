@@ -4,7 +4,8 @@ import fudge
 from nose.tools import eq_, assert_raises
 
 from oedipus import S
-from oedipus.tests import no_results, Biscuit, SphinxMockingTestCase
+from oedipus.tests import (no_results, Biscuit, SphinxMockingTestCase,
+                           BigSphinxMockingTestCase)
 from oedipus.utils import mix_slices
 
 
@@ -117,6 +118,38 @@ class ConcreteSlicingTestCase(SphinxMockingTestCase):
         s = S(Biscuit)
         s[4]
         s[5]
+
+class IntegratedSlicesTestCase(BigSphinxMockingTestCase):
+    @fudge.patch('sphinxapi.SphinxClient')
+    def test_slice_after_len(self, sphinx_client):
+        """Make sure you can slice after len."""
+        self.mock_sphinx(sphinx_client)
+
+        test_s = S(Biscuit)
+
+        # This triggers the one-and-only Sphinx hit.  We should have a
+        # set of results now that we use for the rest of the test
+        # case.
+        num_results = len(test_s)
+        eq_(num_results, 7)
+
+        # Test that we can slice the results without triggering a
+        # Sphinx hit.
+        results = list(test_s[3:5])
+        eq_(len(results), 2)
+        eq_(results[0].id, 103)
+        eq_(results[1].id, 104)
+
+        # Test that we can slice the results again and that it doesn't
+        # trigger another Sphinx hit and also that the previous slice
+        # doesn't affect these results.
+        results = list(test_s[1:2])
+        eq_(len(results), 1)
+        eq_(results[0].id, 101)
+
+        # Also, this shouldn't affect the original results.
+        num_results = len(test_s)
+        eq_(num_results, 7)
 
 
 @fudge.patch('sphinxapi.SphinxClient')

@@ -70,3 +70,38 @@ class SphinxMockingTestCase(TestCase):
                                  {'attrs': {'color': 4},
                                   'id': 124,
                                   'weight': 10000}]}]))
+
+
+class BigSphinxMockingTestCase(TestCase):
+    """Enforces one call to RunQueries and also makes more biscuits.
+
+    Everyone likes biscuits.
+
+    """
+    def setUp(self):
+        Biscuit(id=100, color='red')
+        Biscuit(id=101, color='orange')
+        Biscuit(id=102, color='yellow')
+        Biscuit(id=103, color='green')
+        Biscuit(id=104, color='blue')
+        Biscuit(id=105, color='indigo')
+        Biscuit(id=106, color='violet')
+
+    def tearDown(self):
+        global model_cache
+        model_cache = []
+
+    def mock_sphinx(self, sphinx_client):
+        matches = [{'attrs': {'color': biscuit.id + 100},
+                    'id': biscuit.id,
+                    'weight': 10000}
+                   for biscuit in model_cache]
+
+        (sphinx_client.expects_call().returns_fake()
+                      .is_a_stub()
+                      .expects('RunQueries')
+                      .times_called(1)
+                      .returns(
+                          [{'status': 0,
+                            'total': len(matches),
+                            'matches': matches}]))

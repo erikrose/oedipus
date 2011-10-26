@@ -103,17 +103,21 @@ class S(object):
     def __getitem__(self, k):
         """Do a lazy slice of myself, or return a single item from my results.
 
-        :arg k: If a number, return an actual single result. If a slice, return
-            a new ``S`` with the requested slice bounds taken into account. If
-            my results have already been fetched, return a real list of
-            results, sliced as requested.
+        If ``k`` is a number, then it returns the object at index k.
+        If ``k`` is a slice, return a new ``S`` with the requested
+        slice bounds taken into account.
+
+        If my results have already been fetched, return a real list of
+        results indexed/sliced as requested.
+
+        :arg k: index or slice to retrieve from the results.
 
         Haven't bothered to do the thinking to support slice steps or negative
         slice components yet.
 
         """
         if self._raw_cache is not None:
-            return self._raw_cache[k]
+            return self._results(k)
 
         new = self._clone()
         # Compute a single slice out of any we already have & the new one:
@@ -523,14 +527,22 @@ class S(object):
 
         return sphinx
 
-    def _results(self):
+    def _results(self, k=None):
         """Return an iterable of results in whatever format was picked.
 
         The format is determined by earlier calls to values() or values_dict().
         The result supports len() as well.
 
+        If ``k`` is passed in, then it will restrict the DB query to
+        querying only the objects at index k or in the range of slice
+        k.
+
+        :arg k: Index or slice to retrieve from the results.  Defaults
+            to ``None``.
         """
         ids = self.object_ids()
+        if k is not None:
+            ids = ids[k]
         return self._results_class(self.type, ids, self._fields)
 
     def _default_sort(self):

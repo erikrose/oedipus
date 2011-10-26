@@ -66,7 +66,7 @@ class S(object):
         # only if we never expose the resulting S, since it's impossible to do
         # further __getitem__() calls after that.
         self._slice = slice(None, None)
-        self._results_cache = None
+        self._raw_cache = None
         self._highlight_fields = []
         self._highlight_options = {}
         self._query = None
@@ -112,8 +112,8 @@ class S(object):
         slice components yet.
 
         """
-        if self._results_cache is not None:
-            return self._results_cache[k]
+        if self._raw_cache is not None:
+            return self._raw_cache[k]
 
         new = self._clone()
         # Compute a single slice out of any we already have & the new one:
@@ -292,7 +292,7 @@ class S(object):
         # This catches the case where results haven't been calculated.
         # That could happen if the results from one S were used in a
         # call to excerpt on a new S.
-        if self._results_cache is None:
+        if self._raw_cache is None:
             raise ExcerptError(
                 'excerpt called before results have been calculated.')
 
@@ -535,10 +535,10 @@ class S(object):
         this after a SearchError will retry.
 
         """
-        if self._results_cache is None:
+        if self._raw_cache is None:
             sphinx = self._sphinx()
             try:
-                self._results_cache = results = sphinx.RunQueries()
+                self._raw_cache = results = sphinx.RunQueries()
             except socket.timeout:
                 log.error('Query has timed out!')
                 raise SearchError('Query has timed out!')
@@ -557,7 +557,7 @@ class S(object):
                 return {'matches': []}
 
         # We do only one query at a time; return the first one:
-        return self._results_cache[0]
+        return self._raw_cache[0]
 
 
 try:

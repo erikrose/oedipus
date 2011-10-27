@@ -132,7 +132,7 @@ class TestExcerpt(BiscuitTestCase):
                                  {'before_match': '<i>',
                                   'after_match': '</i>'})
                       .returns(
-                          [('sesame', 'has sesame <i>foo</i>')])
+                          ['sesame', 'has sesame <i>foo</i>'])
                       .expects('RunQueries')
                       .returns(
                           [{'status': 0,
@@ -164,7 +164,7 @@ class TestExcerpt(BiscuitTestCase):
                                  {'before_match': '<i>',
                                   'after_match': '</i>'})
                       .returns(
-                          [('has sesame fa\xc3\xa7on <i>foo</i>',)])
+                          ['has sesame fa\xc3\xa7on <i>foo</i>'])
                       .expects('RunQueries')
                       .returns(
                           [{'status': 0,
@@ -224,7 +224,7 @@ class TestExcerpt(BiscuitTestCase):
                                  {'before_match': '<i>',
                                   'after_match': '</i>'})
                       .returns(
-                          [('has sesame <i>foo</i>',)])
+                          ['has sesame <i>foo</i>'])
                       .expects('RunQueries')
                       .returns(
                           [{'status': 0,

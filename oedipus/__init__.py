@@ -346,9 +346,6 @@ class S(object):
         excerpt = sphinx.BuildExcerpts(
             list(docs), self.meta.index, self._query, options)
 
-        # We only excerpt one result, so peel it out of the list.
-        excerpt = excerpt[0]
-
         # TODO: This assumes the data is in utf-8 which it might not
         # be depending on the backing database configuration.
         excerpt = [e.decode('utf-8') for e in excerpt]

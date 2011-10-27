@@ -122,7 +122,10 @@ class ConcreteSlicingTestCase(SphinxMockingTestCase):
 class IntegratedSlicesTestCase(BigSphinxMockingTestCase):
     @fudge.patch('sphinxapi.SphinxClient')
     def test_slice_after_len(self, sphinx_client):
-        """Make sure you can slice after len."""
+        """Make sure you can slice after len and that it hits Sphinx
+        only once.
+
+        """
         self.mock_sphinx(sphinx_client)
 
         test_s = S(Biscuit)

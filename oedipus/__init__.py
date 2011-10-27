@@ -274,7 +274,13 @@ class S(object):
         return self._clone(next_step=('values', fields))
 
     def object_ids(self):
-        """Returns a list of object ids from Sphinx matches."""
+        """Returns a list of object ids from Sphinx matches.
+
+        If there's a ``SphinxMeta.id_field``, then this will be the
+        values of that field in the results set.  Otherwise it's the
+        ids in the results set.
+
+        """
         raw = self._raw()  # side effect: sets _results_class and _fields
         results = raw['matches']
 
@@ -538,7 +544,7 @@ class S(object):
         k.
 
         :arg k: Index or slice to retrieve from the results.  Defaults
-            to ``None``.
+            to ``None`` which means you'll get the full results set.
         """
         ids = self.object_ids()
         if k is not None:

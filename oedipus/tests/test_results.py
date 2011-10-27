@@ -125,7 +125,7 @@ class ResultsTestCase(SphinxMockingTestCase):
             class SphinxMeta(BaseSphinxMeta):
                 id_field = 'thing_id'
 
-        results = S(FunnyIdBiscuit).values('color').object_ids()
+        results = S(FunnyIdBiscuit).object_ids()
         eq_(results, [123, 124])
 
 

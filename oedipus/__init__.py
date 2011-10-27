@@ -324,7 +324,12 @@ class S(object):
 
         highlight_fields = self._highlight_fields
 
-        if not set(highlight_fields).issubset(set(self._fields)):
+        # highlight_fields should be a subset of _fields unless
+        # _fields is empty.  The latter happens when the programmer
+        # wants object results as opposed to tuple/dict results.
+        if (self._fields and
+            not set(highlight_fields).issubset(set(self._fields))):
+
             raise ExcerptError(
                 'highlight_fields isn\'t a subset of fields %r %r' %
                 (highlight_fields, self._fields))

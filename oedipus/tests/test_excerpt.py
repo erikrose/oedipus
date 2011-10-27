@@ -112,10 +112,41 @@ class TestHighlight(BiscuitTestCase):
         s = (S(Biscuit).query('foo')
                        .highlight('content',
                                   before_match='<i>',
+                                  after_match='</i>')
+                       .values_dict('name'))
+
+        results = list(s)
+        # This raises an exception because highlight_fields (set in
+        # .highlight()) is not a subset of fields (set in
+        # .values_dict())
+        assert_raises(ExcerptError, lambda: s.excerpt(results[0]))
+
+    @fudge.patch('sphinxapi.SphinxClient')
+    def test_highlight_not_subset_of_fields_but_ok(self, sphinx_client):
+        """Test excerpt where fields is empty."""
+        (sphinx_client.expects_call()
+                      .returns_fake()
+                      .is_a_stub()
+                      .expects('BuildExcerpts')
+                      .returns(['sesame'])
+                      .expects('RunQueries')
+                      .returns(
+                          [{'status': 0,
+                            'total': 2,
+                            'matches':
+                              [{'attrs': {'name': 3, 'content': 4},
+                                'id': 123, 'weight': 11111}]
+                          }]))
+
+        s = (S(Biscuit).query('foo')
+                       .highlight('content',
+                                  before_match='<i>',
                                   after_match='</i>'))
 
         results = list(s)
-        assert_raises(ExcerptError, lambda: s.excerpt(results[0]))
+
+        # This should not raise an exception.
+        s.excerpt(results[0])
 
 
 class TestExcerpt(BiscuitTestCase):

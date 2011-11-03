@@ -130,12 +130,12 @@ class S(object):
             return list(new)[0]
 
     def query(self, text, **kwargs):
-        """Use the value of the ``any_`` kwarg as the query string.
+        """Use the value of ``text`` as the query string.
 
         ElasticSearch supports restricting the search to individual fields, but
-        Sphinx just takes a string and searches all fields. To present an
-        elasticutils-compatible API, we take only the ``any_``  kwarg's value
-        and use it as the query string, ignoring any other kwargs.
+        Sphinx just takes a string and searches all fields. You may specify
+        kwargs for when you are using SphinxTolerantElastic, but they will be
+        ignored.
 
         """
         return self._clone(next_step=('query', text))

@@ -50,6 +50,14 @@ class ExcerptError(Exception):
     pass
 
 
+class ExcerptTimeoutError(ExcerptError):
+    pass
+
+
+class ExcerptSocketErrorError(ExcerptError):
+    pass
+
+
 class S(object):
     """A lazy query of Sphinx whose API is a subset of elasticutils.S"""
     def __init__(self, model, host=settings.SPHINX_HOST,
@@ -311,10 +319,14 @@ class S(object):
         unicodes--one for each highlight_field in the order specified.
 
         :raises ExcerptError: Raises an ``ExcerptError`` if
-            ``excerpt`` was called before results were calculated, if
-            ``highlight_fields`` is not a subset of ``fields``, or if
-            there was a socket.error or socket.timeout trying to
-            retrieve the excerpt.
+            ``excerpt`` was called before results were calculated or if
+            ``highlight_fields`` is not a subset of ``fields``
+
+        :raises ExcerptTimeoutError: if there was a socket.timeout
+            when trying to retrieve the excerpt.
+
+        :raises ExcerptSocketErrorError: if there was a socket.error
+            when trying to retrieve the excerpt.
 
         """
         # This catches the case where results haven't been calculated.
@@ -357,9 +369,10 @@ class S(object):
         except socket.error, msg:
             # The sphinxapi exceptions suck, so raising our own and
             # ignoring theirs doesn't make a big difference.
-            raise ExcerptError('Socket error building excerpt: %s!', msg)
+            raise ExcerptSocketErrorError(
+                'Socket error building excerpt: %s!', msg)
         except socket.timeout:
-            raise ExcerptError('Socket timeout error with excerpt!')
+            raise ExcerptTimeoutError('Socket timeout error with excerpt!')
 
         # TODO: This assumes the data is in utf-8 which it might not
         # be depending on the backing database configuration.

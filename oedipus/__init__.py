@@ -485,7 +485,7 @@ class S(object):
             elif action == 'highlight':
                 fields, options = value
                 self._highlight_fields = fields
-                self._highlight_options.update(options)
+                self._highlight_options = options
             elif action == 'exclude':
                 self._set_filters(sphinx, value, exclude=True)
             else:

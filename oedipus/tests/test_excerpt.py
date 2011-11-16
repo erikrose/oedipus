@@ -71,8 +71,7 @@ def test_highlight_overrides_previous(sphinx_client):
     # These three are set in the highlight() call.
     eq_(s._highlight_options,
         {'before_match': '<b>',
-         'after_match': '</b>',
-         'limit': 100})
+         'after_match': '</b>'})
     eq_(s._highlight_fields, ('name',))
 
 

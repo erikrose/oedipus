@@ -24,4 +24,5 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Topic :: Software Development :: Libraries :: Python Modules'],
+    keywords=['sphinx', 'search', 'api']
 )

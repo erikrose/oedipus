@@ -334,7 +334,7 @@ class S(object):
         # call to excerpt on a new S.
         if self._raw_cache is None:
             raise ExcerptError(
-                'excerpt called before results have been calculated.')
+                'excerpt() was called before results were fetched.')
 
         highlight_fields = self._highlight_fields
 
@@ -345,7 +345,7 @@ class S(object):
             not set(highlight_fields).issubset(set(self._fields))):
 
             raise ExcerptError(
-                'highlight_fields isn\'t a subset of fields %r %r' %
+                "highlight_fields isn't a subset of fields %r %r" %
                 (highlight_fields, self._fields))
 
         docs = self._results_class.content_for_fields(

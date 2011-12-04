@@ -54,7 +54,7 @@ class ExcerptTimeoutError(ExcerptError):
     pass
 
 
-class ExcerptSocketErrorError(ExcerptError):
+class ExcerptSocketError(ExcerptError):
     pass
 
 
@@ -325,7 +325,7 @@ class S(object):
         :raises ExcerptTimeoutError: if there was a socket.timeout
             when trying to retrieve the excerpt.
 
-        :raises ExcerptSocketErrorError: if there was a socket.error
+        :raises ExcerptSocketError: if there was a socket.error
             when trying to retrieve the excerpt.
 
         """
@@ -369,7 +369,7 @@ class S(object):
         except socket.error, msg:
             # The sphinxapi exceptions suck, so raising our own and
             # ignoring theirs doesn't make a big difference.
-            raise ExcerptSocketErrorError(
+            raise ExcerptSocketError(
                 'Socket error building excerpt: %s!', msg)
         except socket.timeout:
             raise ExcerptTimeoutError('Socket timeout error with excerpt!')

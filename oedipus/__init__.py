@@ -282,11 +282,11 @@ class S(object):
         return self._clone(next_step=('values', fields))
 
     def object_ids(self):
-        """Returns a list of object ids from Sphinx matches.
+        """Returns a list of object IDs from Sphinx matches.
 
         If there's a ``SphinxMeta.id_field``, then this will be the
         values of that field in the results set.  Otherwise it's the
-        ids in the results set.
+        IDs in the results set.
 
         """
         raw = self._raw()  # side effect: sets _results_class and _fields
@@ -627,7 +627,10 @@ except ImportError:
     pass
 else:
     class SphinxTolerantElastic(elasticutils.S):
-        """Shim around elasticutils' S which ignores Sphinx-specific hacks
+        """Shim around elasticutils' S which makes it look like oedipus.S
+
+        It ignores or implements workalikes for our Sphinx-specific API
+        deviations.
 
         Use this when you're using ElasticSearch if your project is flipping
         quickly between ElasticSearch and Sphinx.
@@ -635,9 +638,27 @@ else:
         """
         def query(self, text, **kwargs):
             """Ignore any non-kw arg."""
-            # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
-            # across all fields, or use the all_ index, or something.
+            # TODO: If you're feeling fancy, turn the `text` arg into an "or"
+            # query across all fields, or use the all_ index, or something.
             return super(SphinxTolerantElastic, self).query(text, **kwargs)
+
+        def object_ids(self):
+            """Returns a list of object IDs from Sphinx matches.
+
+            If there's a ``SphinxMeta.id_field``, then this will be the
+            values of that field in the results set.  Otherwise it's the
+            ids in the results set.
+
+            """
+            hits = self.raw()['hits']['hits']
+            return [int(r['_id']) for r in hits]
+
+        def order_by(self, *fields):
+            """Change @rank to _score, which ES understands."""
+            transforms = {'@rank': '_score',
+                          '-@rank': '-_score'}
+            return super(SphinxTolerantElastic, self).order_by(
+                *[transforms.get(f, f) for f in fields])
 
 
 def _check_weights(weights):

@@ -387,6 +387,7 @@ class S(object):
         elasticutils and is here just for compatibility.
 
         """
+        return self
 
     def __iter__(self):
         return iter(self._results())

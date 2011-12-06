@@ -637,7 +637,7 @@ else:
             """Ignore any non-kw arg."""
             # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
             # across all fields, or use the all_ index, or something.
-            super(SphinxTolerantElastic, self).query(text, **kwargs)
+            return super(SphinxTolerantElastic, self).query(text, **kwargs)
 
 
 def _check_weights(weights):

@@ -380,6 +380,14 @@ class S(object):
 
         return excerpt
 
+    def query_fields(self, *args):
+        """Ignore any default query fields; Sphinx always searches all.
+
+        This method is implemented (and actually does something) in
+        elasticutils and is here just for compatibility.
+
+        """
+
     def __iter__(self):
         return iter(self._results())
 
@@ -628,7 +636,7 @@ else:
             """Ignore any non-kw arg."""
             # TODO: If you're feeling fancy, turn the `text` arg into an "or" query
             # across all fields, or use the all_ index, or something.
-            super(SphinxTolerantElastic, self).query(**kwargs)
+            super(SphinxTolerantElastic, self).query(text, **kwargs)
 
 
 def _check_weights(weights):

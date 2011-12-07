@@ -660,6 +660,10 @@ else:
             return super(SphinxTolerantElastic, self).order_by(
                 *[transforms.get(f, f) for f in fields])
 
+        def group_by(self, *args, **kwargs):
+            # I don't know if this should really be a no-op or not, for API sanity.
+            return self
+
 
 def _check_weights(weights):
     """Verifies weight values are in the appropriate range.

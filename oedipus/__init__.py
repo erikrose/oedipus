@@ -142,7 +142,7 @@ class S(object):
 
         ElasticSearch supports restricting the search to individual fields, but
         Sphinx just takes a string and searches all fields. You may specify
-        kwargs for when you are using SphinxTolerantElastic, but they will be
+        kwargs for when you are using Sphilastic, but they will be
         ignored.
 
         """
@@ -626,7 +626,7 @@ try:
 except ImportError:
     pass
 else:
-    class SphinxTolerantElastic(elasticutils.S):
+    class Sphilastic(elasticutils.S):
         """Shim around elasticutils' S which makes it look like oedipus.S
 
         It ignores or implements workalikes for our Sphinx-specific API
@@ -640,7 +640,7 @@ else:
             """Ignore any non-kw arg."""
             # TODO: If you're feeling fancy, turn the `text` arg into an "or"
             # query across all fields, or use the all_ index, or something.
-            return super(SphinxTolerantElastic, self).query(text, **kwargs)
+            return super(Sphilastic, self).query(text, **kwargs)
 
         def object_ids(self):
             """Returns a list of object IDs from Sphinx matches.
@@ -657,7 +657,7 @@ else:
             """Change @rank to _score, which ES understands."""
             transforms = {'@rank': '_score',
                           '-@rank': '-_score'}
-            return super(SphinxTolerantElastic, self).order_by(
+            return super(Sphilastic, self).order_by(
                 *[transforms.get(f, f) for f in fields])
 
         def group_by(self, *args, **kwargs):

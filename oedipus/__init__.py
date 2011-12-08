@@ -661,7 +661,12 @@ else:
                 *[transforms.get(f, f) for f in fields])
 
         def group_by(self, *args, **kwargs):
-            # I don't know if this should really be a no-op or not, for API sanity.
+            """Do nothing.
+
+            In ES, we smoosh subentities into their parents and index them as a
+            single document, so making this a nop works out.
+
+            """
             return self
 
 

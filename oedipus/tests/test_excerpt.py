@@ -212,7 +212,7 @@ class TestExcerpt(BiscuitTestCase):
                        .values('content'))
 
         results = list(s)
-        eq_(s.excerpt(results[0])[0], u'has sesame fa\xe7on <i>foo</i>')
+        eq_(s.excerpt(results[0])[0], [u'has sesame fa\xe7on <i>foo</i>'])
 
     @fudge.patch('sphinxapi.SphinxClient')
     def test_naughty_excerpt_throws_error(self, sphinx_client):

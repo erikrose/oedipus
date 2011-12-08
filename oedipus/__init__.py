@@ -315,8 +315,12 @@ class S(object):
     __len__ = count
 
     def excerpt(self, result):
-        """Take a result and return the excerpt as a list of
+        """Take a result and return the excerpt as a list of lists of
         unicodes--one for each highlight_field in the order specified.
+
+        Each inner list has only one item and so is fairly pointless, but this
+        gives us API compatibility with elasticutils, which can return multiple
+        highlit fragments for each highlit field.
 
         :raises ExcerptError: Raises an ``ExcerptError`` if
             ``excerpt`` was called before results were calculated or if
@@ -376,7 +380,7 @@ class S(object):
 
         # TODO: This assumes the data is in utf-8 which it might not
         # be depending on the backing database configuration.
-        excerpt = [e.decode('utf-8') for e in excerpt]
+        excerpt = [[e.decode('utf-8')] for e in excerpt]
 
         return excerpt
 
@@ -579,6 +583,7 @@ class S(object):
 
         :arg k: Index or slice to retrieve from the results.  Defaults
             to ``None`` which means you'll get the full results set.
+
         """
         ids = self.object_ids()
         if k is not None:

@@ -655,7 +655,19 @@ else:
             ids in the results set.
 
             """
+            # We don't want object_ids() to bring back highlighted
+            # stuff ("Just the ids, ma'am."), so we gimp
+            # _build_highlight to do nothing, then do our self.raw(),
+            # then ungimp it. That prevents highlight-related bits
+            # from showing up in the query and results.
+
+            build_highlight = self._build_highlight
+            self._build_highlight = lambda: {}
+
             hits = self.raw()['hits']['hits']
+
+            self._build_highlight = build_highlight
+
             return [int(r['_id']) for r in hits]
 
         def order_by(self, *fields):
